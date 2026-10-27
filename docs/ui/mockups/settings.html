@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AriaDesk - 设置页 UI 稿</title>
+<style>
+  :root {
+    --brand: #2E62F6;
+    --brand-hover: #2553D8;
+    --brand-soft: #EBF0FE;
+    --success: #16A34A;
+    --success-soft: #E8F7EE;
+    --warning: #D97706;
+    --warning-soft: #FBF0DF;
+    --danger: #DC2626;
+    --bg: #FAFAFA;
+    --surface: #FFFFFF;
+    --surface-2: #F4F4F5;
+    --border: #E4E4E7;
+    --text-1: #18181B;
+    --text-2: #52525B;
+    --text-3: #A1A1AA;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+    --sans: system-ui, "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text-1);
+    font-size: 13px;
+    line-height: 20px;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ===== 左侧导航 ===== */
+  .sidebar {
+    width: 136px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 12px 10px;
+  }
+  .side-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 16px;
+  }
+  .side-logo .logo {
+    width: 20px; height: 20px;
+    background: var(--brand);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .side-logo .app-name { font-size: 14px; font-weight: 600; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+  .nav-item:hover { background: var(--surface-2); color: var(--text-1); }
+  .nav-item.active {
+    background: var(--brand-soft);
+    color: var(--brand);
+    font-weight: 600;
+  }
+
+  /* ===== 主内容区 ===== */
+  .main { flex: 1; min-width: 0; }
+  .container { max-width: 720px; margin: 0 auto; padding: 24px; }
+
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-top: 24px;
+  }
+  .form-card:first-child { margin-top: 0; }
+  .section-title { font-size: 15px; font-weight: 600; line-height: 24px; margin-bottom: 4px; }
+  .section-desc { font-size: 12px; color: var(--text-2); margin-bottom: 16px; }
+
+  .btn {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-family: var(--sans);
+    transition: background .15s, transform .1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-hover); }
+  .btn-default { background: var(--surface); border-color: var(--border); color: var(--text-1); }
+  .btn-default:hover { background: var(--surface-2); }
+
+  /* 设置行 */
+  .setting-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-main { flex: 1; min-width: 0; }
+  .setting-label { font-size: 13px; font-weight: 500; }
+  .setting-desc { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+  /* 开关 */
+  .switch {
+    width: 40px; height: 20px;
+    border-radius: 999px;
+    background: var(--brand);
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .2s;
+  }
+  .switch .knob {
+    position: absolute;
+    top: 2px; left: 22px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .switch.off { background: var(--border); }
+  .switch.off .knob { left: 2px; }
+
+  /* 单选 */
+  .radio-group { display: flex; flex-direction: column; gap: 10px; }
+  .radio-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .radio {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface);
+  }
+  .radio.checked { border-color: var(--brand); }
+  .radio.checked::after {
+    content: "";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--brand);
+  }
+  .radio-text .radio-label { font-size: 13px; }
+  .radio-text .radio-desc { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+
+  /* 关于页 KV */
+  .kv-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .kv-row:last-child { border-bottom: none; }
+  .kv-key { width: 120px; font-size: 12px; color: var(--text-2); flex-shrink: 0; }
+  .kv-val { font-size: 13px; }
+  .kv-val .mono { font-family: var(--mono); }
+  .kv-actions { display: flex; gap: 8px; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<!-- 左侧导航 -->
+<aside class="sidebar">
+  <div class="side-logo">
+    <div class="logo">
+      <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
+        <path d="M5 1v5M5 6L2.5 3.8M5 6l2.5-2.2M2 8h6" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="app-name">AriaDesk</span>
+  </div>
+  <nav class="nav">
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 7l5-4.5L13 7M4.5 6v6h7V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      首页
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4.5h12M2 8h12M2 11.5h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="5" cy="4.5" r="1.6" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="10" cy="8" r="1.6" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="6.5" cy="11.5" r="1.6" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      管理
+    </div>
+    <div class="nav-item active">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      设置
+    </div>
+  </nav>
+</aside>
+
+<!-- 主内容区 -->
+<main class="main">
+<div class="container">
+
+  <!-- 启动 -->
+  <div class="form-card">
+    <div class="section-title">启动</div>
+    <div class="section-desc">控制应用与 aria2 的启动行为</div>
+
+    <div class="setting-row">
+      <div class="setting-main">
+        <div class="setting-label">开机自启动</div>
+        <div class="setting-desc">登录 Windows 后自动启动 AriaDesk（最小化到托盘）</div>
+      </div>
+      <div class="switch"><span class="knob"></span></div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-main">
+        <div class="setting-label">aria2 随应用启动</div>
+        <div class="setting-desc">打开 AriaDesk 后自动启动 aria2 并恢复上次任务</div>
+      </div>
+      <div class="switch"><span class="knob"></span></div>
+    </div>
+  </div>
+
+  <!-- 关闭行为 -->
+  <div class="form-card">
+    <div class="section-title">关闭行为</div>
+    <div class="section-desc">点击窗口右上角关闭按钮时执行的操作</div>
+
+    <div class="radio-group">
+      <div class="radio-item">
+        <div class="radio"></div>
+        <div class="radio-text">
+          <div class="radio-label">直接退出</div>
+          <div class="radio-desc">关闭窗口并退出程序，同时停止 aria2</div>
+        </div>
+      </div>
+      <div class="radio-item">
+        <div class="radio checked"></div>
+        <div class="radio-text">
+          <div class="radio-label">隐藏到托盘</div>
+          <div class="radio-desc">窗口隐藏到系统托盘，aria2 继续在后台下载</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关于 -->
+  <div class="form-card">
+    <div class="section-title">关于</div>
+
+    <div class="kv-row">
+      <div class="kv-key">AriaDesk 版本</div>
+      <div class="kv-val"><span class="mono">0.1.0</span></div>
+    </div>
+    <div class="kv-row">
+      <div class="kv-key">aria2 版本</div>
+      <div class="kv-val"><span class="mono">1.36.0</span></div>
+    </div>
+    <div class="kv-row">
+      <div class="kv-key">数据目录</div>
+      <div class="kv-val"><span class="mono">%APPDATA%\AriaDesk</span></div>
+    </div>
+
+    <div class="kv-actions">
+      <button class="btn btn-default">查看日志</button>
+      <button class="btn btn-default">打开数据目录</button>
+    </div>
+  </div>
+
+</div>
+</main>
+
+</body>
+</html>

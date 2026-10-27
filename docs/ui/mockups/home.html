@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AriaDesk - 首页 UI 稿</title>
+<style>
+  :root {
+    --brand: #2E62F6;
+    --brand-hover: #2553D8;
+    --brand-soft: #EBF0FE;
+    --success: #16A34A;
+    --success-soft: #E8F7EE;
+    --warning: #D97706;
+    --warning-soft: #FBF0DF;
+    --danger: #DC2626;
+    --bg: #FAFAFA;
+    --surface: #FFFFFF;
+    --surface-2: #F4F4F5;
+    --border: #E4E4E7;
+    --text-1: #18181B;
+    --text-2: #52525B;
+    --text-3: #A1A1AA;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+    --sans: system-ui, "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text-1);
+    font-size: 13px;
+    line-height: 20px;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ===== 左侧导航 ===== */
+  .sidebar {
+    width: 136px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 12px 10px;
+  }
+  .side-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 16px;
+  }
+  .side-logo .logo {
+    width: 20px; height: 20px;
+    background: var(--brand);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .side-logo .app-name { font-size: 14px; font-weight: 600; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+  .nav-item:hover { background: var(--surface-2); color: var(--text-1); }
+  .nav-item.active {
+    background: var(--brand-soft);
+    color: var(--brand);
+    font-weight: 600;
+  }
+  .side-footer {
+    margin-top: auto;
+    padding: 8px;
+    font-size: 12px;
+    color: var(--text-3);
+    font-family: var(--mono);
+  }
+
+  /* ===== 主内容区 ===== */
+  .main { flex: 1; min-width: 0; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px 24px 32px; }
+
+  /* ===== 连接区 ===== */
+  .conn-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.grow { flex: 1; }
+  .field label { font-size: 12px; color: var(--text-2); }
+  .input {
+    height: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    font-family: var(--sans);
+  }
+  .input.readonly { background: var(--surface-2); color: var(--text-2); }
+  .input .mono { font-family: var(--mono); }
+  .w-addr { width: 140px; }
+  .w-port { width: 100px; }
+  .w-token { width: 190px; }
+
+  .btn {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-family: var(--sans);
+    transition: background .15s, transform .1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-hover); }
+  .btn-default { background: var(--surface); border-color: var(--border); color: var(--text-1); }
+  .btn-default:hover { background: var(--surface-2); }
+
+  /* 状态徽标（全页唯一合法圆点） */
+  .badge {
+    margin-left: auto;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--success-soft);
+    color: var(--success);
+  }
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+  /* ===== 统计卡片 ===== */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .stat-icon {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .stat-icon.brand { background: var(--brand-soft); color: var(--brand); }
+  .stat-icon.success { background: var(--success-soft); color: var(--success); }
+  .stat-icon.warning { background: var(--warning-soft); color: var(--warning); }
+  .stat-info .label { font-size: 12px; color: var(--text-2); line-height: 18px; }
+  .stat-info .value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 32px;
+  }
+
+  /* ===== 任务工具条 ===== */
+  .task-toolbar {
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .tabs { display: flex; gap: 24px; }
+  .tab {
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .tab.active { color: var(--brand); font-weight: 600; }
+  .toolbar-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* ===== 任务列表 ===== */
+  .task-list {
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .task-row:last-child { border-bottom: none; }
+  .task-type {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--brand-soft);
+    color: var(--brand);
+  }
+  .task-type.done { background: var(--success-soft); color: var(--success); }
+  .task-type.paused { background: var(--warning-soft); color: var(--warning); }
+  .task-main { flex: 1; min-width: 0; }
+  .task-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .task-meta {
+    font-size: 12px;
+    color: var(--text-2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .task-meta .mono { font-family: var(--mono); }
+  .progress {
+    width: 180px;
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .progress .fill { height: 100%; background: var(--brand); border-radius: 2px; }
+  .progress .fill.done { background: var(--success); }
+  .progress .fill.paused { background: var(--warning); }
+  .task-pct {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-2);
+    width: 38px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .task-ops { display: flex; gap: 4px; flex-shrink: 0; }
+  .op-btn {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+  .op-btn:hover { background: var(--surface-2); color: var(--text-1); }
+  .op-btn.danger:hover { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- 左侧导航 -->
+<aside class="sidebar">
+  <div class="side-logo">
+    <div class="logo">
+      <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
+        <path d="M5 1v5M5 6L2.5 3.8M5 6l2.5-2.2M2 8h6" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="app-name">AriaDesk</span>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 7l5-4.5L13 7M4.5 6v6h7V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      首页
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4.5h12M2 8h12M2 11.5h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="5" cy="4.5" r="1.6" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="10" cy="8" r="1.6" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="6.5" cy="11.5" r="1.6" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      管理
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      设置
+    </div>
+  </nav>
+</aside>
+
+<!-- 主内容区 -->
+<main class="main">
+<div class="container">
+
+  <!-- 连接区 -->
+  <div class="conn-bar">
+    <div class="field">
+      <label>RPC 地址</label>
+      <div class="input readonly w-addr">localhost</div>
+    </div>
+    <div class="field">
+      <label>端口</label>
+      <div class="input w-port"><span class="mono">6800</span></div>
+    </div>
+    <div class="field grow">
+      <label>RPC 密钥 (TOKEN)</label>
+      <div class="input readonly w-token"><span class="mono">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</span></div>
+    </div>
+    <button class="btn btn-primary">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M2.5 7a4.5 4.5 0 014.5-4.5h4M11.5 7a4.5 4.5 0 01-4.5 4.5h-4" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M9.8 1.2l1.9 1.4-1.9 1.4M4.2 12.8l-1.9-1.4 1.9-1.4" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      连接 / 刷新
+    </button>
+    <div class="badge"><span class="dot"></span>已连接 (1 个进行中)</div>
+  </div>
+
+  <!-- 统计卡片 -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-icon brand">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 3.5v9M10 12.5L6.3 9.2M10 12.5l3.7-3.3M4.5 16h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">当前下载速率</div>
+        <div class="value">8.4 MB/s</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon brand">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 16.5v-9M10 7.5l-3.7 3.3M10 7.5l3.7 3.3M4.5 4h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">当前上传速率</div>
+        <div class="value">256 KB/s</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon success">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M11 2L4.5 11H9l-1 7L14.5 8H10l1-6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">进行中任务</div>
+        <div class="value">1</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon warning">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="11" r="6" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 7.5V11l2.5 1.8M8 1.5h4M10 1.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">等待 / 已暂停</div>
+        <div class="value">2</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 任务工具条 -->
+  <div class="task-toolbar">
+    <div class="tabs">
+      <div class="tab active">进行中</div>
+      <div class="tab">等待中 / 暂停</div>
+      <div class="tab">已完成 / 停止</div>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn btn-default">暂停全部</button>
+      <button class="btn btn-default">恢复全部</button>
+      <button class="btn btn-default">清理已完成</button>
+      <button class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 2.5v9M2.5 7h9" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        新建任务
+      </button>
+    </div>
+  </div>
+
+  <!-- 任务列表 -->
+  <div class="task-list">
+
+    <div class="task-row">
+      <div class="task-type">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M5 8.2l2 2 3.5-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="task-main">
+        <div class="task-name">Ubuntu 24.04 LTS Desktop (amd64).iso</div>
+        <div class="task-meta">
+          <span class="mono">3.2 MB/s</span>
+          <span>1.8 GB / 5.9 GB</span>
+          <span>16 连接</span>
+        </div>
+      </div>
+      <div class="progress"><div class="fill" style="width:31%"></div></div>
+      <div class="task-pct">31%</div>
+      <div class="task-ops">
+        <div class="op-btn" title="暂停">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3v8M9 3v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <div class="op-btn danger" title="删除">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4h8M6 4V2.8h2V4M4 4l.5 7h5L10 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="task-row">
+      <div class="task-type paused">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M6 5.5v5M10 5.5v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="task-main">
+        <div class="task-name">magnet:?xt=urn:btih:4a8f…（debian-12.7.0-amd64-DVD.iso）</div>
+        <div class="task-meta">
+          <span>已暂停</span>
+          <span class="mono">400 MB / 3.8 GB</span>
+        </div>
+      </div>
+      <div class="progress"><div class="fill paused" style="width:11%"></div></div>
+      <div class="task-pct">11%</div>
+      <div class="task-ops">
+        <div class="op-btn" title="恢复">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3.5l5.5 3.5L5 10.5V3.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="op-btn danger" title="删除">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4h8M6 4V2.8h2V4M4 4l.5 7h5L10 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="task-row">
+      <div class="task-type paused">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 3.5h9v9h-9z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M6.5 6.5l3 3M9.5 6.5l-3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="task-main">
+        <div class="task-name">Go 1.23.2 windows-amd64.zip</div>
+        <div class="task-meta">
+          <span>等待中</span>
+          <span>排队第 1 位</span>
+        </div>
+      </div>
+      <div class="progress"><div class="fill" style="width:0%"></div></div>
+      <div class="task-pct">0%</div>
+      <div class="task-ops">
+        <div class="op-btn" title="暂停">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3v8M9 3v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <div class="op-btn danger" title="删除">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4h8M6 4V2.8h2V4M4 4l.5 7h5L10 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</main>
+
+</body>
+</html>
