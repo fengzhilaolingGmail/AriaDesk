@@ -190,6 +190,10 @@ func (a *App) SaveSettings(s config.Settings) error {
 	if err := config.Save(s); err != nil {
 		return err
 	}
+	if client != nil && s.DownloadDir != old.DownloadDir {
+		// 立即同步到运行中的 aria2，新建任务无需重启即生效
+		_ = client.ChangeGlobalOption(a.ctx, map[string]string{"dir": s.DownloadDir})
+	}
 	if s.AutoStartApp != old.AutoStartApp {
 		if err := autostart.Set(s.AutoStartApp); err != nil {
 			return fmt.Errorf("更新开机自启失败: %w", err)
@@ -510,7 +514,18 @@ func (a *App) AddURI(uri string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return client.AddURI(a.ctx, uri, nil)
+	return client.AddURI(a.ctx, uri, a.dirOption())
+}
+
+// dirOption 让新建任务始终使用当前设置的下载目录，与 aria2 启动时的 --dir 无关
+func (a *App) dirOption() map[string]string {
+	a.mu.RLock()
+	dir := a.settings.DownloadDir
+	a.mu.RUnlock()
+	if dir == "" {
+		return nil
+	}
+	return map[string]string{"dir": dir}
 }
 
 func (a *App) AddTorrentFile() (string, error) {
@@ -534,7 +549,7 @@ func (a *App) AddTorrentFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return client.AddTorrent(a.ctx, data)
+	return client.AddTorrent(a.ctx, data, a.dirOption())
 }
 
 func (a *App) PauseTask(gid string) error {
@@ -766,7 +781,8 @@ func (a *App) checkCompleted(stopped []rpc.Task) {
 			continue
 		}
 		a.knownStopped[t.Gid] = struct{}{}
-		if t.Status == "complete" {
+		// FollowedBy 非空说明是磁力链元数据任务，真正的内容任务刚被创建，不视为下载完成
+		if t.Status == "complete" && len(t.FollowedBy) == 0 {
 			completed = append(completed, t.Name())
 		}
 	}

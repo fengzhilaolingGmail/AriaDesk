@@ -30,6 +30,7 @@ func BuildArgs(s config.Settings, token string) []string {
 		"--log=" + logFile,
 		"--log-level=warn",
 		"--max-concurrent-downloads=5",
+		"--seed-time=0",
 	}
 }
 

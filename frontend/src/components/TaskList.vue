@@ -28,9 +28,16 @@
           <div class="task-name" :title="taskName(task)">{{ taskName(task) }}</div>
           <div class="task-meta">
             <template v-if="task.status === 'active'">
-              <span class="mono">{{ formatSpeed(task.downloadSpeed) }}</span>
-              <span>{{ formatSize(task.completedLength) }} / {{ formatSize(task.totalLength) }}</span>
-              <span>{{ toNum(task.connections) }} 连接</span>
+              <template v-if="isSeeding(task)">
+                <span>做种中</span>
+                <span class="mono">↑ {{ formatSpeed(task.uploadSpeed) }}</span>
+                <span>已上传 {{ formatSize(task.uploadLength) }}</span>
+              </template>
+              <template v-else>
+                <span class="mono">{{ formatSpeed(task.downloadSpeed) }}</span>
+                <span>{{ formatSize(task.completedLength) }} / {{ formatSize(task.totalLength) }}</span>
+                <span>{{ toNum(task.connections) }} 连接</span>
+              </template>
             </template>
             <template v-else-if="task.status === 'paused'">
               <span>已暂停</span>
@@ -92,6 +99,17 @@ defineEmits(['pause', 'resume', 'remove', 'openDir'])
 
 function pct(task) {
   return formatPercent(task.completedLength, task.totalLength)
+}
+
+// BT 任务下载完后 aria2 默认继续做种（--seed-ratio=1.0），任务保持 active 状态
+function isSeeding(task) {
+  const total = toNum(task.totalLength)
+  return (
+    task.status === 'active' &&
+    !!task?.bittorrent?.info?.name &&
+    total > 0 &&
+    toNum(task.completedLength) >= total
+  )
 }
 
 function typeClass(task) {

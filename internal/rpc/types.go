@@ -48,6 +48,8 @@ type Task struct {
 	InfoHash        string     `json:"infoHash"`
 	NumPieces       string     `json:"numPieces"`
 	PieceLength     string     `json:"pieceLength"`
+	Following       string     `json:"following"`
+	FollowedBy      []string   `json:"followedBy"`
 }
 
 func (t Task) Name() string {

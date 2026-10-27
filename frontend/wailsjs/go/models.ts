@@ -222,6 +222,8 @@ export namespace rpc {
 	    infoHash: string;
 	    numPieces: string;
 	    pieceLength: string;
+	    following: string;
+	    followedBy: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Task(source);
@@ -245,6 +247,8 @@ export namespace rpc {
 	        this.infoHash = source["infoHash"];
 	        this.numPieces = source["numPieces"];
 	        this.pieceLength = source["pieceLength"];
+	        this.following = source["following"];
+	        this.followedBy = source["followedBy"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

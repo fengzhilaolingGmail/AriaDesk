@@ -92,7 +92,7 @@
             <input v-model="downloadDir" class="input mono" placeholder="C:\Users\...\Downloads" />
             <button class="btn btn-default" @click="onBrowse">浏览…</button>
           </div>
-          <div class="form-tip">保存时校验目录存在且可写，仅影响之后新建的任务</div>
+          <div class="form-tip">保存时校验目录存在且可写，立即生效，仅影响之后新建的任务</div>
           <div v-if="saveError" class="form-error">{{ saveError }}</div>
         </div>
 

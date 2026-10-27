@@ -141,10 +141,14 @@ func (c *Client) AddURI(ctx context.Context, uri string, options map[string]stri
 	return gid, err
 }
 
-func (c *Client) AddTorrent(ctx context.Context, data []byte) (string, error) {
+func (c *Client) AddTorrent(ctx context.Context, data []byte, options map[string]string) (string, error) {
 	var gid string
 	encoded := base64.StdEncoding.EncodeToString(data)
-	err := c.call(ctx, "aria2.addTorrent", []any{encoded}, &gid)
+	params := []any{encoded}
+	if len(options) > 0 {
+		params = append(params, []string{}, options)
+	}
+	err := c.call(ctx, "aria2.addTorrent", params, &gid)
 	return gid, err
 }
 
@@ -178,6 +182,10 @@ func (c *Client) UnpauseAll(ctx context.Context) error {
 
 func (c *Client) PurgeDownloadResult(ctx context.Context) error {
 	return c.call(ctx, "aria2.purgeDownloadResult", nil, nil)
+}
+
+func (c *Client) ChangeGlobalOption(ctx context.Context, options map[string]string) error {
+	return c.call(ctx, "aria2.changeGlobalOption", []any{options}, nil)
 }
 
 func (c *Client) Shutdown(ctx context.Context) error {
