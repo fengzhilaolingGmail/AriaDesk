@@ -485,7 +485,19 @@ func (a *App) GetGlobalStat() (rpc.GlobalStat, error) {
 	if err != nil {
 		return rpc.GlobalStat{}, err
 	}
-	return client.GetGlobalStat(a.ctx)
+	stat, err := client.GetGlobalStat(a.ctx)
+	normalizeStat(&stat)
+	return stat, err
+}
+
+// normalizeStat 归零无活动任务时的残留速率：aria2 的速率是滑动窗口平均值，
+// 任务结束后会缓慢衰减约 10s；没有活动任务时不存在真实传输，直接归零避免误导。
+// 做种中的任务 status 为 active 会计入 numActive，因此不影响做种上传速率的显示。
+func normalizeStat(stat *rpc.GlobalStat) {
+	if stat.NumActive == "0" {
+		stat.DownloadSpeed = "0"
+		stat.UploadSpeed = "0"
+	}
 }
 
 func (a *App) GetTasks(tab string) ([]rpc.Task, error) {
@@ -731,6 +743,7 @@ func (a *App) pollOnce() {
 		a.setConnected(false)
 		return
 	}
+	normalizeStat(&stat)
 	a.setConnected(true)
 
 	active, aerr := client.TellActive(ctx)
