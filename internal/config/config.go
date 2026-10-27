@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 const DirName = "AriaDesk"
@@ -16,6 +17,7 @@ type Settings struct {
 	AutoStartApp   bool   `json:"autoStartApp"`
 	CloseToTray    bool   `json:"closeToTray"`
 	HistoryMax     int    `json:"historyMax"`
+	MaxConcurrent  int    `json:"maxConcurrent"`
 }
 
 const (
@@ -39,6 +41,15 @@ func SettingsPath() string {
 	return filepath.Join(DataDir(), "settings.json")
 }
 
+// DefaultMaxConcurrent 同时下载数量默认值：CPU 核心数的一半，至少 1。
+func DefaultMaxConcurrent() int {
+	n := runtime.NumCPU() / 2
+	if n < 1 {
+		n = 1
+	}
+	return n
+}
+
 func Default() Settings {
 	downloadDir := filepath.Join(os.Getenv("USERPROFILE"), "Downloads")
 	return Settings{
@@ -48,6 +59,7 @@ func Default() Settings {
 		AutoStartApp:   false,
 		CloseToTray:    true,
 		HistoryMax:     DefaultHistoryMax,
+		MaxConcurrent:  DefaultMaxConcurrent(),
 	}
 }
 
@@ -74,6 +86,12 @@ func Load() (Settings, error) {
 	}
 	if s.HistoryMax <= 0 || s.HistoryMax > MaxHistoryMax {
 		s.HistoryMax = DefaultHistoryMax
+	}
+	if s.MaxConcurrent < 1 {
+		s.MaxConcurrent = DefaultMaxConcurrent()
+	}
+	if s.MaxConcurrent > runtime.NumCPU() {
+		s.MaxConcurrent = runtime.NumCPU()
 	}
 	return s, nil
 }

@@ -96,6 +96,16 @@
           <div v-if="saveError" class="form-error">{{ saveError }}</div>
         </div>
 
+        <div class="form-row">
+          <div class="form-label">同时下载数量</div>
+          <div class="input-wrap">
+            <select class="pager-select" v-model.number="maxConcurrent">
+              <option v-for="n in cpuOptions" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </div>
+          <div class="form-tip">限制 aria2 同时下载的任务数（最大为 CPU 核心数 {{ cpuCores }}，默认为一半），立即生效</div>
+        </div>
+
         <div class="form-actions">
           <button class="btn btn-primary" :disabled="saving" @click="onSave">
             <span v-if="saving" class="spinner"></span>保存修改
@@ -107,7 +117,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index'
 import { useAppStore } from '../stores/app'
 import InstallGuide from '../components/InstallGuide.vue'
@@ -119,8 +129,18 @@ const revealedToken = ref('')
 const regenerating = ref(false)
 const procBusy = ref(false)
 const downloadDir = ref('')
+const maxConcurrent = ref(1)
 const saving = ref(false)
 const saveError = ref('')
+
+const cpuCores = computed(() => store.about?.cpuCores || 16)
+const cpuOptions = computed(() => Array.from({ length: cpuCores.value }, (_, i) => i + 1))
+
+onMounted(async () => {
+  try {
+    await store.loadAbout()
+  } catch { /* 忽略，使用默认核心数 */ }
+})
 
 const tokenDisplay = computed(() => {
   if (tokenRevealed.value && revealedToken.value) return revealedToken.value
@@ -129,6 +149,10 @@ const tokenDisplay = computed(() => {
 
 watch(() => store.settings.downloadDir, (v) => {
   if (!downloadDir.value) downloadDir.value = v
+}, { immediate: true })
+
+watch(() => store.settings.maxConcurrent, (v) => {
+  if (v) maxConcurrent.value = v
 }, { immediate: true })
 
 async function toggleReveal() {
@@ -208,7 +232,7 @@ async function onSave() {
   saving.value = true
   saveError.value = ''
   try {
-    await store.saveSettings({ downloadDir: downloadDir.value.trim() })
+    await store.saveSettings({ downloadDir: downloadDir.value.trim(), maxConcurrent: maxConcurrent.value })
     ElMessage.success('已保存')
   } catch (e) {
     saveError.value = String(e)

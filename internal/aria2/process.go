@@ -29,7 +29,7 @@ func BuildArgs(s config.Settings, token string) []string {
 		"--save-session-interval=60",
 		"--log=" + logFile,
 		"--log-level=warn",
-		"--max-concurrent-downloads=5",
+		"--max-concurrent-downloads=" + fmt.Sprintf("%d", s.MaxConcurrent),
 		"--seed-time=0",
 	}
 }

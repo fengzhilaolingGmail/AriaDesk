@@ -11,6 +11,7 @@ const defaultSettings = () => ({
   autoStartApp: false,
   closeToTray: true,
   historyMax: 1000,
+  maxConcurrent: 0,
 })
 
 export const useAppStore = defineStore('app', {

@@ -29,6 +29,7 @@ export namespace config {
 	    autoStartApp: boolean;
 	    closeToTray: boolean;
 	    historyMax: number;
+	    maxConcurrent: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -43,6 +44,7 @@ export namespace config {
 	        this.autoStartApp = source["autoStartApp"];
 	        this.closeToTray = source["closeToTray"];
 	        this.historyMax = source["historyMax"];
+	        this.maxConcurrent = source["maxConcurrent"];
 	    }
 	}
 
@@ -102,6 +104,7 @@ export namespace main {
 	    appVersion: string;
 	    aria2Version: string;
 	    dataDir: string;
+	    cpuCores: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AboutInfo(source);
@@ -112,6 +115,7 @@ export namespace main {
 	        this.appVersion = source["appVersion"];
 	        this.aria2Version = source["aria2Version"];
 	        this.dataDir = source["dataDir"];
+	        this.cpuCores = source["cpuCores"];
 	    }
 	}
 	export class Aria2State {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	stdruntime "runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -36,6 +37,7 @@ type AboutInfo struct {
 	AppVersion   string `json:"appVersion"`
 	Aria2Version string `json:"aria2Version"`
 	DataDir      string `json:"dataDir"`
+	CPUCores     int    `json:"cpuCores"`
 }
 
 type App struct {
@@ -202,6 +204,9 @@ func (a *App) SaveSettings(s config.Settings) error {
 	if s.HistoryMax != old.HistoryMax {
 		a.history.SetMax(s.HistoryMax)
 	}
+	if client != nil && s.MaxConcurrent != old.MaxConcurrent {
+		_ = client.ChangeGlobalOption(a.ctx, map[string]string{"max-concurrent-downloads": fmt.Sprintf("%d", s.MaxConcurrent)})
+	}
 	if s.AutoStartApp != old.AutoStartApp {
 		if err := autostart.Set(s.AutoStartApp); err != nil {
 			return fmt.Errorf("更新开机自启失败: %w", err)
@@ -218,6 +223,7 @@ func (a *App) GetAbout() (AboutInfo, error) {
 		AppVersion:   appVersion,
 		Aria2Version: version,
 		DataDir:      config.DataDir(),
+		CPUCores:     stdruntime.NumCPU(),
 	}, nil
 }
 
