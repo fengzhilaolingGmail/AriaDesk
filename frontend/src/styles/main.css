@@ -72,13 +72,7 @@ body {
   height: 100vh;
 }
 .side-logo { display: flex; align-items: center; gap: 8px; padding: 6px 8px 16px; }
-.side-logo .logo {
-  width: 20px; height: 20px;
-  background: var(--brand);
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
+.side-logo .logo-img { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; }
 .side-logo .app-name { font-size: 14px; font-weight: 600; }
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .nav-item {

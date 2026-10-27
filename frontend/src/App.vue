@@ -2,11 +2,7 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="side-logo">
-        <div class="logo">
-          <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
-            <path d="M5 1v5M5 6L2.5 3.8M5 6l2.5-2.2M2 8h6" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
+        <img class="logo-img" :src="iconUrl" alt="AriaDesk" width="20" height="20" />
         <span class="app-name">AriaDesk</span>
       </div>
       <nav class="nav">
@@ -43,6 +39,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useAppStore } from './stores/app'
+import iconUrl from './assets/icon.png'
 
 const store = useAppStore()
 
