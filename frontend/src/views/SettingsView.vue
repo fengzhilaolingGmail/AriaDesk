@@ -49,6 +49,22 @@
       </div>
     </div>
 
+    <!-- 下载历史 -->
+    <div class="form-card">
+      <div class="section-title has-desc">下载历史</div>
+      <div class="section-desc">本地保存已完成 / 停止任务的记录（aria2 本身不保留）</div>
+
+      <div class="setting-row">
+        <div class="setting-main">
+          <div class="setting-label">历史记录条数上限</div>
+          <div class="setting-desc">超过上限后自动清理最旧的记录，最多 5000 条</div>
+        </div>
+        <select class="pager-select" :value="store.settings.historyMax" @change="onHistoryMaxChange">
+          <option v-for="n in [100, 500, 1000, 2000, 5000]" :key="n" :value="n">{{ n }} 条</option>
+        </select>
+      </div>
+    </div>
+
     <!-- 关于 -->
     <div class="form-card">
       <div class="section-title">关于</div>
@@ -114,6 +130,17 @@ async function setCloseToTray(v) {
     await store.saveSettings({ closeToTray: v })
   } catch (e) {
     ElMessage.error(`保存失败：${e}`)
+  }
+}
+
+async function onHistoryMaxChange(e) {
+  const v = Number(e.target.value)
+  if (!v || v === store.settings.historyMax) return
+  try {
+    await store.saveSettings({ historyMax: v })
+    ElMessage.success('已保存')
+  } catch (err) {
+    ElMessage.error(`保存失败：${err}`)
   }
 }
 

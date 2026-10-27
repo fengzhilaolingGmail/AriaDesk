@@ -3,6 +3,7 @@
 import {aria2} from '../models';
 import {main} from '../models';
 import {rpc} from '../models';
+import {history} from '../models';
 import {config} from '../models';
 
 export function AddTorrentFile():Promise<string>;
@@ -13,6 +14,8 @@ export function BrowseDownloadDir():Promise<string>;
 
 export function Connect():Promise<void>;
 
+export function DeleteHistoryRecord(arg1:string):Promise<void>;
+
 export function DetectAria2():Promise<aria2.DetectResult>;
 
 export function GetAbout():Promise<main.AboutInfo>;
@@ -20,6 +23,8 @@ export function GetAbout():Promise<main.AboutInfo>;
 export function GetAria2State():Promise<main.Aria2State>;
 
 export function GetGlobalStat():Promise<rpc.GlobalStat>;
+
+export function GetHistory():Promise<Array<history.Record>>;
 
 export function GetSettings():Promise<config.Settings>;
 
@@ -32,6 +37,8 @@ export function InstallAria2():Promise<void>;
 export function OpenDataDir():Promise<void>;
 
 export function OpenDownloadDir():Promise<void>;
+
+export function OpenFolder(arg1:string):Promise<void>;
 
 export function OpenTaskDir(arg1:string):Promise<void>;
 

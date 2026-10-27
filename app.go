@@ -17,6 +17,7 @@ import (
 	"ariadesk/internal/aria2"
 	"ariadesk/internal/autostart"
 	"ariadesk/internal/config"
+	"ariadesk/internal/history"
 	"ariadesk/internal/rpc"
 	"ariadesk/internal/secret"
 	"ariadesk/internal/tray"
@@ -56,12 +57,15 @@ type App struct {
 	knownMu       sync.Mutex
 	knownStopped  map[string]struct{}
 	stoppedSeeded atomic.Bool
+
+	history *history.Store
 }
 
 func NewApp(icon []byte) *App {
 	a := &App{
 		icon:         icon,
 		knownStopped: make(map[string]struct{}),
+		history:      history.Load(),
 	}
 	a.proc = aria2.NewProcess()
 	a.proc.SetOnExit(func() {
@@ -78,6 +82,7 @@ func (a *App) startup(ctx context.Context) {
 		runtime.LogErrorf(ctx, "加载配置失败: %v", err)
 	}
 	a.settings = s
+	a.history.SetMax(s.HistoryMax)
 
 	detected := aria2.Detect(s.Aria2Path)
 	a.detected = detected
@@ -161,7 +166,7 @@ func (a *App) emitState() {
 	if a.ctx == nil {
 		return
 	}
-	running := a.proc.Running()
+	running := a.proc.Running() || a.connected.Load()
 	runtime.EventsEmit(a.ctx, "aria2:state", map[string]any{
 		"running":   running,
 		"connected": a.connected.Load(),
@@ -193,6 +198,9 @@ func (a *App) SaveSettings(s config.Settings) error {
 	if client != nil && s.DownloadDir != old.DownloadDir {
 		// 立即同步到运行中的 aria2，新建任务无需重启即生效
 		_ = client.ChangeGlobalOption(a.ctx, map[string]string{"dir": s.DownloadDir})
+	}
+	if s.HistoryMax != old.HistoryMax {
+		a.history.SetMax(s.HistoryMax)
 	}
 	if s.AutoStartApp != old.AutoStartApp {
 		if err := autostart.Set(s.AutoStartApp); err != nil {
@@ -429,7 +437,8 @@ func (a *App) GetAria2State() (Aria2State, error) {
 	port := a.settings.RPCPort
 	a.mu.RUnlock()
 	return Aria2State{
-		Running:   a.proc.Running(),
+		// Running 语义为"aria2 正在运行"：本进程托管，或已接管外部进程（RPC 已连通即证明其在运行）
+		Running:   a.proc.Running() || a.connected.Load(),
 		PID:       a.proc.PID(),
 		Port:      port,
 		Connected: a.connected.Load(),
@@ -511,7 +520,7 @@ func (a *App) GetTasks(tab string) ([]rpc.Task, error) {
 	case "waiting":
 		return client.TellWaiting(a.ctx, 0, 1000)
 	case "stopped":
-		return client.TellStopped(a.ctx, 0, 100)
+		return client.TellStopped(a.ctx, 0, 1000)
 	default:
 		return nil, fmt.Errorf("未知任务类型: %s", tab)
 	}
@@ -615,7 +624,43 @@ func (a *App) PurgeCompleted() error {
 	if err != nil {
 		return err
 	}
+	if a.history.Clear() {
+		a.emitHistory()
+	}
 	return client.PurgeDownloadResult(a.ctx)
+}
+
+// ---------- 下载历史（本地持久化） ----------
+
+func (a *App) emitHistory() {
+	if a.ctx == nil {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "history", a.history.List())
+}
+
+func (a *App) GetHistory() []history.Record {
+	return a.history.List()
+}
+
+func (a *App) DeleteHistoryRecord(gid string) error {
+	if a.history.Remove(gid) {
+		a.emitHistory()
+	}
+	return nil
+}
+
+// OpenFolder 打开指定目录（用于历史记录的“打开目录”，此时任务已从 aria2 消失）
+func (a *App) OpenFolder(path string) error {
+	if path == "" {
+		return fmt.Errorf("该记录没有目录信息")
+	}
+	p := filepath.Clean(path)
+	if _, err := os.Stat(p); err != nil {
+		return fmt.Errorf("目录不存在（可能已被移动或删除）：%s", p)
+	}
+	openPath(p)
+	return nil
 }
 
 // ---------- 目录与日志 ----------
@@ -748,7 +793,7 @@ func (a *App) pollOnce() {
 
 	active, aerr := client.TellActive(ctx)
 	waiting, werr := client.TellWaiting(ctx, 0, 1000)
-	stopped, serr := client.TellStopped(ctx, 0, 100)
+	stopped, serr := client.TellStopped(ctx, 0, 1000)
 	if aerr != nil {
 		active = []rpc.Task{}
 	}
@@ -781,26 +826,41 @@ func (a *App) resetCompletionTracking() {
 
 func (a *App) checkCompleted(stopped []rpc.Task) {
 	a.knownMu.Lock()
-	if !a.stoppedSeeded.Swap(true) {
-		for _, t := range stopped {
-			a.knownStopped[t.Gid] = struct{}{}
-		}
-		a.knownMu.Unlock()
-		return
-	}
+	first := !a.stoppedSeeded.Swap(true)
 	var completed []string
+	historyChanged := false
 	for _, t := range stopped {
 		if _, seen := a.knownStopped[t.Gid]; seen {
 			continue
 		}
 		a.knownStopped[t.Gid] = struct{}{}
 		// FollowedBy 非空说明是磁力链元数据任务，真正的内容任务刚被创建，不视为下载完成
-		if t.Status == "complete" && len(t.FollowedBy) == 0 {
+		if len(t.FollowedBy) > 0 {
+			continue
+		}
+		// 记入本地历史（包括基线播种时发现的、应用未运行期间完成的任务）
+		rec := history.Record{
+			Gid:             t.Gid,
+			Name:            t.Name(),
+			Status:          t.Status,
+			TotalLength:     t.TotalLength,
+			CompletedLength: t.CompletedLength,
+			Dir:             t.Dir,
+			CompletedAt:     time.Now(),
+		}
+		if a.history.Add(rec) {
+			historyChanged = true
+		}
+		// 基线播种不弹通知，避免启动时对旧任务批量误报
+		if !first && t.Status == "complete" {
 			completed = append(completed, t.Name())
 		}
 	}
 	a.knownMu.Unlock()
 
+	if historyChanged {
+		a.emitHistory()
+	}
 	for _, name := range completed {
 		if a.ctx != nil {
 			runtime.EventsEmit(a.ctx, "task:completed", map[string]any{"name": name})

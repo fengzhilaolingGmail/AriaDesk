@@ -84,7 +84,7 @@
         @pause="(t) => run(() => store.pauseTask(t.gid))"
         @resume="(t) => run(() => store.unpauseTask(t.gid))"
         @remove="askRemove"
-        @openDir="(t) => run(() => store.openTaskDir(t.gid))"
+        @openDir="(t) => run(() => (t.history ? store.openFolder(t.dir) : store.openTaskDir(t.gid)))"
       />
     </template>
 
@@ -104,7 +104,7 @@
 
     <!-- 清理确认 -->
     <el-dialog v-model="purgeVisible" title="清理已完成" width="400px">
-      <p style="font-size: 13px; color: var(--text-1);">将清理 {{ purgeCount }} 条已完成 / 停止的下载记录。</p>
+      <p style="font-size: 13px; color: var(--text-1);">将清理 {{ purgeCount }} 条已完成 / 停止的下载记录（含历史记录）。</p>
       <p style="font-size: 12px; color: var(--text-2); margin-top: 6px;">仅清除列表记录，已下载的文件不会被删除。</p>
       <template #footer>
         <button class="btn btn-default" @click="purgeVisible = false">取消</button>
@@ -144,6 +144,11 @@ const currentTasks = computed(() => {
   const t = store.tasks
   const waiting = t.waiting || []
   const stopped = t.stopped || []
+  // 本地历史与 aria2 内存中的 stopped 记录按 gid 去重，优先展示实时记录
+  const liveGids = new Set(stopped.map((x) => x.gid))
+  const hist = (store.history || [])
+    .filter((h) => !liveGids.has(h.gid))
+    .map((h) => ({ ...h, history: true }))
   switch (activeTab.value) {
     case 'active':
       return t.active || []
@@ -152,11 +157,11 @@ const currentTasks = computed(() => {
     case 'paused':
       return waiting.filter((x) => x.status === 'paused')
     case 'stopped':
-      return stopped.filter((x) => x.status === 'error' || x.status === 'removed')
+      return [...stopped.filter((x) => x.status === 'error' || x.status === 'removed'), ...hist.filter((h) => h.status !== 'complete')]
     case 'complete':
-      return stopped.filter((x) => x.status === 'complete')
+      return [...stopped.filter((x) => x.status === 'complete'), ...hist.filter((h) => h.status === 'complete')]
     default:
-      return [...(t.active || []), ...waiting, ...stopped]
+      return [...(t.active || []), ...waiting, ...stopped, ...hist]
   }
 })
 
@@ -210,7 +215,13 @@ async function run(fn) {
 function onPauseAll() { run(() => store.pauseAll()) }
 function onUnpauseAll() { run(() => store.unpauseAll()) }
 
-const purgeCount = computed(() => (store.stat ? toNum(store.stat.numStopped) : 0))
+const purgeCount = computed(() => {
+  const stopped = store.tasks.stopped || []
+  const liveGids = new Set(stopped.map((x) => x.gid))
+  const histOnly = (store.history || []).filter((h) => !liveGids.has(h.gid)).length
+  const live = store.stat ? toNum(store.stat.numStopped) : 0
+  return live + histOnly
+})
 
 function onPurge() {
   if (purgeCount.value === 0) {
@@ -238,6 +249,10 @@ async function confirmRemove() {
   const task = removeTarget.value
   removeVisible.value = false
   if (!task) return
+  if (task.history) {
+    await run(() => store.deleteHistoryRecord(task.gid))
+    return
+  }
   // 已完成/出错/已移除的记录走 removeDownloadResult，其余走 remove
   const stopped = ['complete', 'error', 'removed'].includes(task.status)
   await run(() => store.removeTask(task.gid, stopped))

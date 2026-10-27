@@ -50,10 +50,12 @@
             <template v-else-if="task.status === 'complete'">
               <span>已完成</span>
               <span class="mono">{{ formatSize(task.totalLength) }}</span>
+              <span v-if="task.completedAt">{{ formatTime(task.completedAt) }}</span>
             </template>
             <template v-else>
               <span>{{ task.status === 'error' ? (task.errorMessage || '出错') : '已停止' }}</span>
               <span class="mono">{{ formatSize(task.completedLength) }} / {{ formatSize(task.totalLength) }}</span>
+              <span v-if="task.completedAt">{{ formatTime(task.completedAt) }}</span>
             </template>
           </div>
         </div>
@@ -108,7 +110,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { formatPercent, formatSize, formatSpeed, taskName, toNum } from '../utils/format'
+import { formatPercent, formatSize, formatSpeed, formatTime, taskName, toNum } from '../utils/format'
 
 const props = defineProps({
   tasks: { type: Array, default: () => [] },

@@ -21,7 +21,16 @@ export function formatPercent(completed, total) {
   return Math.min(100, Math.round((toNum(completed) / t) * 100))
 }
 
+export function formatTime(v) {
+  if (!v) return ''
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export function taskName(task) {
+  if (task?.name) return task.name
   const bt = task?.bittorrent?.info?.name
   if (bt) return bt
   const path = task?.files?.[0]?.path

@@ -10,6 +10,7 @@ const defaultSettings = () => ({
   autoStartAria2: false,
   autoStartApp: false,
   closeToTray: true,
+  historyMax: 1000,
 })
 
 export const useAppStore = defineStore('app', {
@@ -20,6 +21,7 @@ export const useAppStore = defineStore('app', {
     aria2State: { running: false, pid: 0, port: 0, connected: false },
     stat: null,
     tasks: { active: [], waiting: [], stopped: [] },
+    history: [],
     tokenMasked: '',
     connectError: '',
     connecting: false,
@@ -34,16 +36,18 @@ export const useAppStore = defineStore('app', {
   actions: {
     async init() {
       try {
-        const [settings, detect, state, token] = await Promise.all([
+        const [settings, detect, state, token, history] = await Promise.all([
           App.GetSettings().catch(() => null),
           App.DetectAria2().catch(() => null),
           App.GetAria2State().catch(() => null),
           App.GetTokenMasked().catch(() => ''),
+          App.GetHistory().catch(() => []),
         ])
         if (settings) this.settings = settings
         if (detect) this.detect = detect
         if (state) this.aria2State = state
         this.tokenMasked = token || ''
+        this.history = history || []
       } finally {
         this.loading = false
       }
@@ -78,6 +82,9 @@ export const useAppStore = defineStore('app', {
       })
       EventsOn('task:completed', (data) => {
         if (data?.name) ElMessage.success(`下载完成：${data.name}`)
+      })
+      EventsOn('history', (data) => {
+        this.history = data || []
       })
     },
 
@@ -180,6 +187,8 @@ export const useAppStore = defineStore('app', {
     async unpauseAll() { await App.UnpauseAll() },
     async purgeCompleted() { await App.PurgeCompleted() },
     async openTaskDir(gid) { await App.OpenTaskDir(gid) },
+    async openFolder(path) { await App.OpenFolder(path) },
+    async deleteHistoryRecord(gid) { await App.DeleteHistoryRecord(gid) },
 
     async browseDownloadDir() {
       return await App.BrowseDownloadDir()

@@ -18,6 +18,10 @@ export function Connect() {
   return window['go']['main']['App']['Connect']();
 }
 
+export function DeleteHistoryRecord(arg1) {
+  return window['go']['main']['App']['DeleteHistoryRecord'](arg1);
+}
+
 export function DetectAria2() {
   return window['go']['main']['App']['DetectAria2']();
 }
@@ -32,6 +36,10 @@ export function GetAria2State() {
 
 export function GetGlobalStat() {
   return window['go']['main']['App']['GetGlobalStat']();
+}
+
+export function GetHistory() {
+  return window['go']['main']['App']['GetHistory']();
 }
 
 export function GetSettings() {
@@ -56,6 +64,10 @@ export function OpenDataDir() {
 
 export function OpenDownloadDir() {
   return window['go']['main']['App']['OpenDownloadDir']();
+}
+
+export function OpenFolder(arg1) {
+  return window['go']['main']['App']['OpenFolder'](arg1);
 }
 
 export function OpenTaskDir(arg1) {

@@ -15,7 +15,13 @@ type Settings struct {
 	AutoStartAria2 bool   `json:"autoStartAria2"`
 	AutoStartApp   bool   `json:"autoStartApp"`
 	CloseToTray    bool   `json:"closeToTray"`
+	HistoryMax     int    `json:"historyMax"`
 }
+
+const (
+	DefaultHistoryMax = 1000
+	MaxHistoryMax     = 5000
+)
 
 func DataDir() string {
 	base, err := os.UserConfigDir()
@@ -41,6 +47,7 @@ func Default() Settings {
 		AutoStartAria2: true,
 		AutoStartApp:   false,
 		CloseToTray:    true,
+		HistoryMax:     DefaultHistoryMax,
 	}
 }
 
@@ -64,6 +71,9 @@ func Load() (Settings, error) {
 	}
 	if s.DownloadDir == "" {
 		s.DownloadDir = Default().DownloadDir
+	}
+	if s.HistoryMax <= 0 || s.HistoryMax > MaxHistoryMax {
+		s.HistoryMax = DefaultHistoryMax
 	}
 	return s, nil
 }
