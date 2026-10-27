@@ -158,6 +158,11 @@ export const useAppStore = defineStore('app', {
       } catch { /* poll 事件会兜底刷新 */ }
     },
 
+    async fetchAllTasks() {
+      if (!this.connected) return
+      await Promise.all(['active', 'waiting', 'stopped'].map((t) => this.fetchTasks(t)))
+    },
+
     async addURIs(uris) {
       for (const uri of uris) {
         await App.AddURI(uri)

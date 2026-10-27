@@ -41,8 +41,19 @@
         </svg>
       </div>
       <div class="stat-info">
-        <div class="label">等待 / 已暂停</div>
+        <div class="label">等待中任务</div>
         <div class="value">{{ numWaiting }}</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon muted">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M7.5 5v10M12.5 5v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">已暂停任务</div>
+        <div class="value">{{ numPaused }}</div>
       </div>
     </div>
   </div>
@@ -59,5 +70,8 @@ const stat = computed(() => (store.connected ? store.stat : null))
 const downloadSpeed = computed(() => formatSpeed(stat.value?.downloadSpeed ?? 0))
 const uploadSpeed = computed(() => formatSpeed(stat.value?.uploadSpeed ?? 0))
 const numActive = computed(() => (stat.value ? toNum(stat.value.numActive) : 0))
-const numWaiting = computed(() => (stat.value ? toNum(stat.value.numWaiting) : 0))
+// getGlobalStat 的 numWaiting 不区分等待与暂停，从 tellWaiting 列表按 status 分别计数
+const waitingTasks = computed(() => (stat.value ? store.tasks.waiting || [] : []))
+const numWaiting = computed(() => waitingTasks.value.filter((t) => t.status === 'waiting').length)
+const numPaused = computed(() => waitingTasks.value.filter((t) => t.status === 'paused').length)
 </script>

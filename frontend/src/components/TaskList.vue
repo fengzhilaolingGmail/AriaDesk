@@ -1,7 +1,7 @@
 <template>
   <div class="task-list">
     <template v-if="tasks.length">
-      <div v-for="(task, i) in tasks" :key="task.gid" class="task-row" :style="{ animationDelay: `${Math.min(i, 10) * 30}ms` }">
+      <div v-for="(task, i) in pagedTasks" :key="task.gid" class="task-row" :style="{ animationDelay: `${Math.min(i, 10) * 30}ms` }">
         <div class="task-type" :class="typeClass(task)">
           <!-- 进行中 -->
           <svg v-if="task.status === 'active'" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -86,16 +86,60 @@
       </svg>
       <div class="empty-text">此列表中没有下载任务</div>
     </div>
+
+    <div v-if="tasks.length" class="task-pager">
+      <span class="pager-total">共 {{ tasks.length }} 条</span>
+      <button class="pager-btn" :disabled="page <= 1" title="上一页" @click="page--">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8.5 3.5L5 7l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <template v-for="(p, i) in pageNumbers" :key="i">
+        <span v-if="p === '…'" class="pager-ellipsis">…</span>
+        <button v-else class="pager-btn" :class="{ current: p === page }" @click="page = p">{{ p }}</button>
+      </template>
+      <button class="pager-btn" :disabled="page >= pageCount" title="下一页" @click="page++">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 3.5L9 7l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <select class="pager-select" v-model.number="pageSize">
+        <option v-for="n in [5, 10, 30, 50, 100]" :key="n" :value="n">{{ n }} 条/页</option>
+      </select>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { computed, ref, watch } from 'vue'
 import { formatPercent, formatSize, formatSpeed, taskName, toNum } from '../utils/format'
 
-defineProps({
+const props = defineProps({
   tasks: { type: Array, default: () => [] },
+  // 列表标识（当前 Tab），变化时回到第一页
+  listKey: { type: String, default: '' },
 })
 defineEmits(['pause', 'resume', 'remove', 'openDir'])
+
+const pageSize = ref(5)
+const page = ref(1)
+const pageCount = computed(() => Math.max(1, Math.ceil(props.tasks.length / pageSize.value)))
+const pagedTasks = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return props.tasks.slice(start, start + pageSize.value)
+})
+// 页码窗口：≤7 页全显示，否则当前页前后各 1 页 + 首尾 + 省略号
+const pageNumbers = computed(() => {
+  const n = pageCount.value
+  const cur = page.value
+  if (n <= 7) return Array.from({ length: n }, (_, i) => i + 1)
+  const pages = [1]
+  const lo = Math.max(2, cur - 1)
+  const hi = Math.min(n - 1, cur + 1)
+  if (lo > 2) pages.push('…')
+  for (let i = lo; i <= hi; i++) pages.push(i)
+  if (hi < n - 1) pages.push('…')
+  pages.push(n)
+  return pages
+})
+watch([pageSize, () => props.listKey], () => { page.value = 1 })
+watch(pageCount, (n) => { if (page.value > n) page.value = n })
 
 function pct(task) {
   return formatPercent(task.completedLength, task.totalLength)

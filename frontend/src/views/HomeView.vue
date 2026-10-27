@@ -4,7 +4,7 @@
 
     <template v-else-if="store.loading">
       <div class="stats">
-        <div v-for="i in 4" :key="i" class="skeleton-block skeleton-stat"></div>
+        <div v-for="i in 5" :key="i" class="skeleton-block skeleton-stat"></div>
       </div>
       <div class="task-list">
         <div v-for="i in 5" :key="i" class="skeleton-row">
@@ -80,6 +80,7 @@
 
       <TaskList
         :tasks="currentTasks"
+        :list-key="activeTab"
         @pause="(t) => run(() => store.pauseTask(t.gid))"
         @resume="(t) => run(() => store.unpauseTask(t.gid))"
         @remove="askRemove"
@@ -126,17 +127,38 @@ import NewTaskDialog from '../components/NewTaskDialog.vue'
 const store = useAppStore()
 
 const tabs = [
+  { key: 'all', label: '全部' },
   { key: 'active', label: '进行中' },
-  { key: 'waiting', label: '等待中 / 暂停' },
-  { key: 'stopped', label: '已完成 / 停止' },
+  { key: 'waiting', label: '等待中' },
+  { key: 'paused', label: '暂停' },
+  { key: 'stopped', label: '停止' },
+  { key: 'complete', label: '已完成' },
 ]
-const activeTab = ref('active')
+const activeTab = ref('all')
 const newTaskVisible = ref(false)
 const removeVisible = ref(false)
 const removeTarget = ref(null)
 const purgeVisible = ref(false)
 
-const currentTasks = computed(() => store.tasks[activeTab.value] || [])
+const currentTasks = computed(() => {
+  const t = store.tasks
+  const waiting = t.waiting || []
+  const stopped = t.stopped || []
+  switch (activeTab.value) {
+    case 'active':
+      return t.active || []
+    case 'waiting':
+      return waiting.filter((x) => x.status === 'waiting')
+    case 'paused':
+      return waiting.filter((x) => x.status === 'paused')
+    case 'stopped':
+      return stopped.filter((x) => x.status === 'error' || x.status === 'removed')
+    case 'complete':
+      return stopped.filter((x) => x.status === 'complete')
+    default:
+      return [...(t.active || []), ...waiting, ...stopped]
+  }
+})
 
 const badgeClass = computed(() => {
   if (!store.detect.installed) return 'uninstalled'
@@ -151,11 +173,11 @@ const badgeText = computed(() => {
 
 function switchTab(key) {
   activeTab.value = key
-  store.fetchTasks(key)
+  store.fetchAllTasks()
 }
 
 watch(() => store.connected, (v) => {
-  if (v) store.fetchTasks(activeTab.value)
+  if (v) store.fetchAllTasks()
 }, { immediate: true })
 
 async function onConnect() {
@@ -216,6 +238,8 @@ async function confirmRemove() {
   const task = removeTarget.value
   removeVisible.value = false
   if (!task) return
-  await run(() => store.removeTask(task.gid, activeTab.value === 'stopped'))
+  // 已完成/出错/已移除的记录走 removeDownloadResult，其余走 remove
+  const stopped = ['complete', 'error', 'removed'].includes(task.status)
+  await run(() => store.removeTask(task.gid, stopped))
 }
 </script>
