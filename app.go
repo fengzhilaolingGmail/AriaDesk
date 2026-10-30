@@ -101,6 +101,14 @@ func (a *App) startup(ctx context.Context) {
 	}
 	a.client = rpc.NewClient(s.RPCPort, token)
 
+	// 启动时生成/同步 aria2.conf，保证配置页随时可读、启动时使用最新设置
+	if err := aria2.SyncConf(s, token); err != nil {
+		runtime.LogErrorf(ctx, "生成 aria2 配置失败: %v", err)
+	}
+
+	// 每次启动自动更新公共 Tracker 列表
+	go a.autoUpdateTrackers()
+
 	tray.Start(a.icon, tray.Handlers{
 		OnShow: func() {
 			runtime.WindowShow(a.ctx)
@@ -207,6 +215,15 @@ func (a *App) SaveSettings(s config.Settings) error {
 	}
 	if client != nil && s.MaxConcurrent != old.MaxConcurrent {
 		_ = client.ChangeGlobalOption(a.ctx, map[string]string{"max-concurrent-downloads": fmt.Sprintf("%d", s.MaxConcurrent)})
+	}
+	if s.DownloadDir != old.DownloadDir || s.RPCPort != old.RPCPort || s.MaxConcurrent != old.MaxConcurrent {
+		// 托管键统一写入 aria2.conf，重启 aria2 后生效
+		token, err := secret.LoadOrCreate()
+		if err == nil {
+			if err := aria2.SyncConf(s, token); err != nil {
+				return fmt.Errorf("更新 aria2 配置失败: %w", err)
+			}
+		}
 	}
 	if s.AutoStartApp != old.AutoStartApp {
 		if err := autostart.Set(s.AutoStartApp); err != nil {
@@ -438,11 +455,104 @@ func (a *App) RegenerateToken() error {
 	}
 	a.mu.RLock()
 	client := a.client
+	s := a.settings
 	a.mu.RUnlock()
 	if client != nil {
 		client.SetToken(token)
 	}
+	// rpc-secret 是托管键，同步到 aria2.conf 保持重启后一致
+	if err := aria2.SyncConf(s, token); err != nil {
+		return fmt.Errorf("更新 aria2 配置失败: %w", err)
+	}
 	return nil
+}
+
+// ---------- aria2 配置文件 ----------
+
+// GetAria2ConfSections 按分区返回 aria2.conf 内容，供配置页卡片展示。
+func (a *App) GetAria2ConfSections() ([]aria2.ConfSection, error) {
+	a.mu.RLock()
+	s := a.settings
+	a.mu.RUnlock()
+	token, err := secret.LoadOrCreate()
+	if err != nil {
+		return nil, err
+	}
+	if err := aria2.SyncConf(s, token); err != nil {
+		return nil, err
+	}
+	text, err := aria2.ReadConf()
+	if err != nil {
+		return nil, err
+	}
+	return aria2.ParseConf(text), nil
+}
+
+// SaveAria2ConfValues 就地更新配置文件中的指定键，重启 aria2 后生效。
+func (a *App) SaveAria2ConfValues(values map[string]string) error {
+	if len(values) == 0 {
+		return fmt.Errorf("没有需要保存的配置")
+	}
+	for k := range values {
+		if strings.TrimSpace(k) == "" {
+			return fmt.Errorf("配置键不能为空")
+		}
+	}
+	return aria2.UpdateConfValues(values)
+}
+
+// ResetAria2Conf 重置为默认配置。
+func (a *App) ResetAria2Conf() error {
+	a.mu.RLock()
+	s := a.settings
+	a.mu.RUnlock()
+	token, err := secret.LoadOrCreate()
+	if err != nil {
+		return err
+	}
+	return aria2.ResetConf(s, token)
+}
+
+// UpdateBtTrackers 拉取最新公共 Tracker 列表，写入 aria2.conf 的 bt-tracker，
+// 并实时应用到运行中的 aria2，返回列表内容（逗号分隔）。
+func (a *App) UpdateBtTrackers() (string, error) {
+	trackers, err := aria2.FetchTrackers()
+	if err != nil {
+		return "", err
+	}
+	list := strings.Join(trackers, ",")
+	if err := aria2.UpdateConfValues(map[string]string{"bt-tracker": list}); err != nil {
+		return "", err
+	}
+	a.applyTrackersLive(list)
+	return list, nil
+}
+
+// autoUpdateTrackers 每次启动时自动更新 bt-tracker，失败仅记录日志。
+func (a *App) autoUpdateTrackers() {
+	trackers, err := aria2.FetchTrackers()
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "自动更新 Tracker 失败: %v", err)
+		return
+	}
+	list := strings.Join(trackers, ",")
+	if err := aria2.UpdateConfValues(map[string]string{"bt-tracker": list}); err != nil {
+		runtime.LogErrorf(a.ctx, "写入 Tracker 配置失败: %v", err)
+		return
+	}
+	runtime.LogInfof(a.ctx, "已自动更新 %d 个 Tracker", len(trackers))
+	a.applyTrackersLive(list)
+}
+
+// applyTrackersLive 将最新 bt-tracker 应用到运行中的 aria2，无需重启。
+func (a *App) applyTrackersLive(list string) {
+	client := a.getClient()
+	if client == nil || !a.connected.Load() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_ = client.ChangeGlobalOption(ctx, map[string]string{"bt-tracker": list})
+	cancel()
 }
 
 // ---------- aria2 进程 ----------
@@ -467,6 +577,13 @@ func (a *App) StartAria2() error {
 		a.detected = r
 		_ = config.Save(a.settings)
 		a.mu.Unlock()
+	}
+
+	// 重启场景：旧进程刚退出，端口可能尚未完全释放，先等待其空闲，
+	// 否则会误入下方的“复用外部进程”分支而报错
+	const portWaitRounds = 25 // 最多等待 5 秒
+	for i := 0; i < portWaitRounds && aria2.PortInUse(s.RPCPort); i++ {
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	if aria2.PortInUse(s.RPCPort) {
@@ -503,13 +620,11 @@ func (a *App) StartAria2() error {
 	if err != nil {
 		return err
 	}
-	if err := a.proc.Start(exePath, aria2.BuildArgs(s, token)); err != nil {
-		return err
+	// 启动前将应用设置同步到 aria2.conf，由配置文件统一控制启动参数
+	if err := aria2.SyncConf(s, token); err != nil {
+		return fmt.Errorf("生成 aria2 配置失败: %w", err)
 	}
-	a.adopted.Store(false)
-	a.emitState()
 
-	// 等待 RPC 就绪
 	client := a.getClient()
 	if client == nil {
 		a.mu.Lock()
@@ -517,31 +632,49 @@ func (a *App) StartAria2() error {
 		client = a.client
 		a.mu.Unlock()
 	}
-	deadline := time.Now().Add(10 * time.Second)
-	connected := false
-	for time.Now().Before(deadline) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		v, err := client.GetVersion(ctx)
-		cancel()
-		if err == nil {
-			a.mu.Lock()
-			a.detected.Version = v.Version
-			a.mu.Unlock()
-			connected = true
-			break
+
+	// 启动并等待 RPC 就绪；进程立即退出（如端口绑定竞争失败）时重试
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Second)
 		}
-		if !a.proc.Running() {
-			return fmt.Errorf("aria2 启动后立即退出，请查看日志 %s", filepath.Join(config.Aria2Dir(), "aria2.log"))
+		if err := a.proc.Start(exePath, aria2.BuildArgs()); err != nil {
+			return err
 		}
-		time.Sleep(300 * time.Millisecond)
+		a.adopted.Store(false)
+		a.emitState()
+
+		connected := false
+		deadline := time.Now().Add(10 * time.Second)
+		for time.Now().Before(deadline) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			v, err := client.GetVersion(ctx)
+			cancel()
+			if err == nil {
+				a.mu.Lock()
+				a.detected.Version = v.Version
+				a.mu.Unlock()
+				connected = true
+				break
+			}
+			if !a.proc.Running() {
+				lastErr = fmt.Errorf("aria2 启动后立即退出，请查看日志 %s", filepath.Join(config.Aria2Dir(), "aria2.log"))
+				break
+			}
+			time.Sleep(300 * time.Millisecond)
+		}
+		if connected {
+			a.setConnected(true)
+			a.resetCompletionTracking()
+			a.startPolling()
+			return nil
+		}
+		if a.proc.Running() {
+			return fmt.Errorf("aria2 已启动但 RPC 未就绪")
+		}
 	}
-	if !connected {
-		return fmt.Errorf("aria2 已启动但 RPC 未就绪")
-	}
-	a.setConnected(true)
-	a.resetCompletionTracking()
-	a.startPolling()
-	return nil
+	return lastErr
 }
 
 func (a *App) StopAria2() error {

@@ -22,6 +22,8 @@ export function DetectAria2():Promise<aria2.DetectResult>;
 
 export function GetAbout():Promise<main.AboutInfo>;
 
+export function GetAria2ConfSections():Promise<Array<aria2.ConfSection>>;
+
 export function GetAria2State():Promise<main.Aria2State>;
 
 export function GetGlobalStat():Promise<rpc.GlobalStat>;
@@ -56,7 +58,11 @@ export function RegenerateToken():Promise<void>;
 
 export function RemoveTask(arg1:string,arg2:boolean):Promise<void>;
 
+export function ResetAria2Conf():Promise<void>;
+
 export function RevealToken():Promise<string>;
+
+export function SaveAria2ConfValues(arg1:Record<string, string>):Promise<void>;
 
 export function SaveSettings(arg1:config.Settings):Promise<void>;
 
@@ -71,3 +77,5 @@ export function UnpauseAll():Promise<void>;
 export function UnpauseTask(arg1:string):Promise<void>;
 
 export function UpdateAria2ToVersion(arg1:string):Promise<void>;
+
+export function UpdateBtTrackers():Promise<string>;

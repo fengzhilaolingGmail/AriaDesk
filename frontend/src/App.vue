@@ -21,6 +21,13 @@
           </svg>
           管理
         </router-link>
+        <router-link to="/conf" class="nav-item" active-class="active">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 2.5h5.5L12 5v8.5H4v-11z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M9.5 2.5V5H12M6 8h4M6 10.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          配置
+        </router-link>
         <router-link to="/settings" class="nav-item" active-class="active">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.3"/>

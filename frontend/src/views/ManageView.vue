@@ -103,76 +103,12 @@
           </div>
         </div>
       </div>
-
-      <!-- RPC -->
-      <div class="form-card">
-        <div class="section-title">RPC</div>
-
-        <div class="form-row">
-          <div class="form-label">RPC 密钥 (Token)</div>
-          <div class="input-wrap">
-            <div class="input readonly">
-              <span class="mono">{{ tokenDisplay }}</span>
-              <span class="suffix-icon" :title="tokenRevealed ? '隐藏' : '显示'" @click="toggleReveal">
-                <svg v-if="!tokenRevealed" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M1.5 7s2.2-3.5 5.5-3.5S12.5 7 12.5 7 10.3 10.5 7 10.5 1.5 7 1.5 7z" stroke="currentColor" stroke-width="1.2"/>
-                  <circle cx="7" cy="7" r="1.8" stroke="currentColor" stroke-width="1.2"/>
-                </svg>
-                <svg v-else width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2.5 2.5l9 9M6 3.6A5.4 5.4 0 017 3.5c3.3 0 5.5 3.5 5.5 3.5a10.6 10.6 0 01-1.7 2.2M8 10.4a5.4 5.4 0 01-1 .1c-3.3 0-5.5-3.5-5.5-3.5a10.6 10.6 0 011.7-2.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                </svg>
-              </span>
-            </div>
-            <button class="btn btn-default" :disabled="regenerating" @click="onRegenerate">重新生成</button>
-          </div>
-          <div class="form-tip">保存在 %APPDATA%\AriaDesk\token.pass，已加密存储</div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-label">RPC 端口</div>
-          <div class="input-wrap">
-            <input class="input mono w-fixed" :value="store.settings.rpcPort" @change="onPortChange" />
-          </div>
-          <div class="form-tip">修改后需重启 aria2 生效</div>
-        </div>
-      </div>
-
-      <!-- 下载 -->
-      <div class="form-card">
-        <div class="section-title">下载</div>
-
-        <div class="form-row">
-          <div class="form-label">默认下载目录</div>
-          <div class="input-wrap">
-            <input v-model="downloadDir" class="input mono" placeholder="C:\Users\...\Downloads" />
-            <button class="btn btn-default" @click="onBrowse">浏览…</button>
-          </div>
-          <div class="form-tip">保存时校验目录存在且可写，立即生效，仅影响之后新建的任务</div>
-          <div v-if="saveError" class="form-error">{{ saveError }}</div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-label">同时下载数量</div>
-          <div class="input-wrap">
-            <select class="pager-select" v-model.number="maxConcurrent">
-              <option v-for="n in cpuOptions" :key="n" :value="n">{{ n }}</option>
-            </select>
-          </div>
-          <div class="form-tip">限制 aria2 同时下载的任务数（最大为 CPU 核心数 {{ cpuCores }}，默认为一半），立即生效</div>
-        </div>
-
-        <div class="form-actions">
-          <button class="btn btn-primary" :disabled="saving" @click="onSave">
-            <span v-if="saving" class="spinner"></span>保存修改
-          </button>
-        </div>
-      </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index'
 import { useAppStore } from '../stores/app'
@@ -180,14 +116,7 @@ import InstallGuide from '../components/InstallGuide.vue'
 
 const store = useAppStore()
 
-const tokenRevealed = ref(false)
-const revealedToken = ref('')
-const regenerating = ref(false)
 const procBusy = ref(false)
-const downloadDir = ref('')
-const maxConcurrent = ref(1)
-const saving = ref(false)
-const saveError = ref('')
 const updateLogRef = ref(null)
 
 const updateBusy = computed(() => store.update.phase === 'running')
@@ -283,68 +212,6 @@ async function onUninstall() {
   await store.uninstallAria2()
 }
 
-const cpuCores = computed(() => store.about?.cpuCores || 16)
-const cpuOptions = computed(() => Array.from({ length: cpuCores.value }, (_, i) => i + 1))
-
-onMounted(async () => {
-  try {
-    await store.loadAbout()
-  } catch { /* 忽略，使用默认核心数 */ }
-})
-
-const tokenDisplay = computed(() => {
-  if (tokenRevealed.value && revealedToken.value) return revealedToken.value
-  return store.tokenMasked || '••••••••••••'
-})
-
-watch(() => store.settings.downloadDir, (v) => {
-  if (!downloadDir.value) downloadDir.value = v
-}, { immediate: true })
-
-watch(() => store.settings.maxConcurrent, (v) => {
-  if (v) maxConcurrent.value = v
-}, { immediate: true })
-
-async function toggleReveal() {
-  if (tokenRevealed.value) {
-    tokenRevealed.value = false
-    return
-  }
-  try {
-    revealedToken.value = await store.revealToken()
-    tokenRevealed.value = true
-  } catch (e) {
-    ElMessage.error(String(e))
-  }
-}
-
-async function onRegenerate() {
-  regenerating.value = true
-  try {
-    await store.regenerateToken()
-    tokenRevealed.value = false
-    revealedToken.value = ''
-  } catch (e) {
-    ElMessage.error(String(e))
-  } finally {
-    regenerating.value = false
-  }
-}
-
-async function onPortChange(e) {
-  const port = parseInt(e.target.value, 10)
-  if (!port || port < 1 || port > 65535 || port === store.settings.rpcPort) {
-    e.target.value = store.settings.rpcPort
-    return
-  }
-  try {
-    await store.saveSettings({ rpcPort: port })
-  } catch (err) {
-    ElMessage.error(`保存失败：${err}`)
-    e.target.value = store.settings.rpcPort
-  }
-}
-
 async function onStart() {
   procBusy.value = true
   try {
@@ -365,29 +232,6 @@ async function onStop() {
     ElMessage.error(`停止失败：${e}`)
   } finally {
     procBusy.value = false
-  }
-}
-
-async function onBrowse() {
-  try {
-    const dir = await store.browseDownloadDir()
-    if (dir) downloadDir.value = dir
-  } catch (e) {
-    const msg = String(e)
-    if (!/取消|cancel/i.test(msg)) saveError.value = msg
-  }
-}
-
-async function onSave() {
-  saving.value = true
-  saveError.value = ''
-  try {
-    await store.saveSettings({ downloadDir: downloadDir.value.trim(), maxConcurrent: maxConcurrent.value })
-    ElMessage.success('已保存')
-  } catch (e) {
-    saveError.value = String(e)
-  } finally {
-    saving.value = false
   }
 }
 </script>

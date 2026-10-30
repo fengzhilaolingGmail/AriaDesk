@@ -219,7 +219,6 @@ export const useAppStore = defineStore('app', {
     async regenerateToken() {
       await App.RegenerateToken()
       await this.refreshToken()
-      ElMessage.success('已重新生成，需重启 aria2 生效')
     },
 
     async fetchTasks(tab) {
@@ -266,6 +265,22 @@ export const useAppStore = defineStore('app', {
 
     async readLog() {
       return await App.ReadAria2Log()
+    },
+
+    async getAria2ConfSections() {
+      return await App.GetAria2ConfSections()
+    },
+
+    async saveAria2ConfValues(values) {
+      await App.SaveAria2ConfValues(values)
+    },
+
+    async resetAria2Conf() {
+      await App.ResetAria2Conf()
+    },
+
+    async updateBtTrackers() {
+      return await App.UpdateBtTrackers()
     },
 
     async openDataDir() { await App.OpenDataDir() },

@@ -12,26 +12,9 @@ import (
 	"ariadesk/internal/config"
 )
 
-// BuildArgs 按设计文档 §4.2 生成启动参数（不使用 --daemon）。
-func BuildArgs(s config.Settings, token string) []string {
-	aria2Dir := config.Aria2Dir()
-	sessionFile := filepath.Join(aria2Dir, "session.txt")
-	logFile := filepath.Join(aria2Dir, "aria2.log")
-	return []string{
-		"--enable-rpc",
-		fmt.Sprintf("--rpc-listen-port=%d", s.RPCPort),
-		"--rpc-secret=" + token,
-		"--rpc-allow-origin-all=true",
-		"--rpc-listen-all=false",
-		"--dir=" + s.DownloadDir,
-		"--input-file=" + sessionFile,
-		"--save-session=" + sessionFile,
-		"--save-session-interval=60",
-		"--log=" + logFile,
-		"--log-level=warn",
-		"--max-concurrent-downloads=" + fmt.Sprintf("%d", s.MaxConcurrent),
-		"--seed-time=0",
-	}
+// BuildArgs 通过 --conf-path 使用配置文件启动，所有参数由 aria2.conf 统一控制。
+func BuildArgs() []string {
+	return []string{"--conf-path", ConfPath()}
 }
 
 func EnsureRuntimeFiles() error {

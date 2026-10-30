@@ -34,6 +34,10 @@ export function GetAbout() {
   return window['go']['main']['App']['GetAbout']();
 }
 
+export function GetAria2ConfSections() {
+  return window['go']['main']['App']['GetAria2ConfSections']();
+}
+
 export function GetAria2State() {
   return window['go']['main']['App']['GetAria2State']();
 }
@@ -102,8 +106,16 @@ export function RemoveTask(arg1, arg2) {
   return window['go']['main']['App']['RemoveTask'](arg1, arg2);
 }
 
+export function ResetAria2Conf() {
+  return window['go']['main']['App']['ResetAria2Conf']();
+}
+
 export function RevealToken() {
   return window['go']['main']['App']['RevealToken']();
+}
+
+export function SaveAria2ConfValues(arg1) {
+  return window['go']['main']['App']['SaveAria2ConfValues'](arg1);
 }
 
 export function SaveSettings(arg1) {
@@ -132,4 +144,8 @@ export function UnpauseTask(arg1) {
 
 export function UpdateAria2ToVersion(arg1) {
   return window['go']['main']['App']['UpdateAria2ToVersion'](arg1);
+}
+
+export function UpdateBtTrackers() {
+  return window['go']['main']['App']['UpdateBtTrackers']();
 }
