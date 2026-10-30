@@ -16,6 +16,22 @@ export namespace aria2 {
 	        this.path = source["path"];
 	    }
 	}
+	export class ReleaseInfo {
+	    version: string;
+	    prerelease: boolean;
+	    publishedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReleaseInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.prerelease = source["prerelease"];
+	        this.publishedAt = source["publishedAt"];
+	    }
+	}
 
 }
 

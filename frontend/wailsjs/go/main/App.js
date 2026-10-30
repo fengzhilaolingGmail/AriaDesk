@@ -14,6 +14,10 @@ export function BrowseDownloadDir() {
   return window['go']['main']['App']['BrowseDownloadDir']();
 }
 
+export function CheckAria2Updates() {
+  return window['go']['main']['App']['CheckAria2Updates']();
+}
+
 export function Connect() {
   return window['go']['main']['App']['Connect']();
 }
@@ -114,10 +118,18 @@ export function StopAria2() {
   return window['go']['main']['App']['StopAria2']();
 }
 
+export function UninstallAria2() {
+  return window['go']['main']['App']['UninstallAria2']();
+}
+
 export function UnpauseAll() {
   return window['go']['main']['App']['UnpauseAll']();
 }
 
 export function UnpauseTask(arg1) {
   return window['go']['main']['App']['UnpauseTask'](arg1);
+}
+
+export function UpdateAria2ToVersion(arg1) {
+  return window['go']['main']['App']['UpdateAria2ToVersion'](arg1);
 }

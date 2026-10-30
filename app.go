@@ -52,6 +52,7 @@ type App struct {
 	proc      *aria2.Process
 	adopted   atomic.Bool
 	connected atomic.Bool
+	updating  atomic.Bool
 
 	pollMu   sync.Mutex
 	pollStop chan struct{}
@@ -251,9 +252,10 @@ func (a *App) InstallAria2() error {
 				return
 			}
 			runtime.EventsEmit(a.ctx, "aria2:install", map[string]any{
-				"line":  line,
-				"phase": phase,
-				"error": errStr,
+				"line":    line,
+				"phase":   phase,
+				"error":   errStr,
+				"percent": -1,
 			})
 		}
 		emit("", "running", "")
@@ -262,10 +264,146 @@ func (a *App) InstallAria2() error {
 			emit("", "error", err.Error())
 			return
 		}
-		if _, derr := a.DetectAria2(); derr != nil {
+		d, derr := a.DetectAria2()
+		if derr != nil {
 			runtime.LogErrorf(a.ctx, "安装后重新检测失败: %v", derr)
 		}
+		if !d.Installed {
+			emit("", "error", "winget 报告安装成功，但未检测到 aria2c.exe，请重试或手动安装 aria2")
+			return
+		}
 		emit("", "done", "")
+	}()
+	return nil
+}
+
+// ---------- 版本管理（检查更新 / 切换版本 / 卸载） ----------
+
+// CheckAria2Updates 从 GitHub 获取最近的 aria2 发布列表，含正式版/测试版标记。
+func (a *App) CheckAria2Updates() ([]aria2.ReleaseInfo, error) {
+	return aria2.FetchReleases(12)
+}
+
+func (a *App) emitUpdate(line, phase, errStr string, percent int) {
+	if a.ctx == nil {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "aria2:update", map[string]any{
+		"line":    line,
+		"phase":   phase,
+		"error":   errStr,
+		"percent": percent,
+	})
+}
+
+// UpdateAria2ToVersion 切换到指定版本：版本更高即升级，更低即回退。
+// 从 GitHub 下载该版本到 AriaDesk 托管目录并切换路径，之前在运行则自动重启。
+func (a *App) UpdateAria2ToVersion(version string) error {
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return fmt.Errorf("版本号不能为空")
+	}
+	if !a.updating.CompareAndSwap(false, true) {
+		return fmt.Errorf("已有版本切换任务在进行中")
+	}
+	go func() {
+		defer a.updating.Store(false)
+		a.emitUpdate("", "running", "", -1)
+		emit := func(line string) { a.emitUpdate(line, "running", "", -1) }
+		fail := func(msg string) { a.emitUpdate("", "error", msg, -1) }
+
+		wasRunning := a.proc.Running() || a.connected.Load()
+		if wasRunning {
+			emit("正在停止 aria2…")
+			if err := a.StopAria2(); err != nil {
+				fail("停止 aria2 失败: " + err.Error())
+				return
+			}
+		}
+
+		exe, err := aria2.EnsureVersion(version, func(line string, pct int) {
+			a.emitUpdate(line, "running", "", pct)
+		})
+		if err != nil {
+			fail(err.Error())
+			return
+		}
+
+		a.mu.Lock()
+		a.settings.Aria2Path = exe
+		_ = config.Save(a.settings)
+		a.mu.Unlock()
+		if _, derr := a.DetectAria2(); derr != nil {
+			runtime.LogErrorf(a.ctx, "切换版本后重新检测失败: %v", derr)
+		}
+		emit(fmt.Sprintf("已切换到 aria2 %s", version))
+
+		if wasRunning {
+			emit("正在启动 aria2…")
+			if err := a.StartAria2(); err != nil {
+				fail("启动失败: " + err.Error())
+				return
+			}
+		}
+		a.emitUpdate("", "done", "", 100)
+	}()
+	return nil
+}
+
+// UninstallAria2 卸载 aria2：优先删除 AriaDesk 托管的版本目录，
+// 若仍存在 winget 安装的副本则通过 winget 卸载。
+func (a *App) UninstallAria2() error {
+	if !a.updating.CompareAndSwap(false, true) {
+		return fmt.Errorf("已有版本切换任务在进行中")
+	}
+	go func() {
+		defer a.updating.Store(false)
+		a.emitUpdate("", "running", "", -1)
+		emit := func(line string) { a.emitUpdate(line, "running", "", -1) }
+		fail := func(msg string) { a.emitUpdate("", "error", msg, -1) }
+
+		if a.proc.Running() || a.connected.Load() {
+			emit("正在停止 aria2…")
+			if err := a.StopAria2(); err != nil {
+				fail("停止 aria2 失败: " + err.Error())
+				return
+			}
+		}
+
+		a.mu.Lock()
+		a.settings.Aria2Path = ""
+		_ = config.Save(a.settings)
+		a.mu.Unlock()
+
+		if _, err := os.Stat(aria2.VersionsDir()); err == nil {
+			emit("删除 AriaDesk 下载的 aria2…")
+			if err := os.RemoveAll(aria2.VersionsDir()); err != nil {
+				fail("删除托管版本失败: " + err.Error())
+				return
+			}
+		}
+
+		r := aria2.Detect("")
+		if r.Installed {
+			if strings.Contains(r.Path, "WinGet") {
+				emit("通过 winget 卸载 aria2…")
+				if err := aria2.Uninstall(emit); err != nil {
+					fail(err.Error())
+					return
+				}
+				r = aria2.Detect("")
+			}
+			if r.Installed {
+				fail(fmt.Sprintf("检测到非 AriaDesk 安装的 aria2（%s），请手动卸载", r.Path))
+				return
+			}
+		}
+
+		a.mu.Lock()
+		a.detected = aria2.DetectResult{Installed: false}
+		a.mu.Unlock()
+		a.emitState()
+		a.emitUpdate("", "done", "", 100)
 	}()
 	return nil
 }

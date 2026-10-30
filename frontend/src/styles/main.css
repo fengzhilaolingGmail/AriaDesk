@@ -507,6 +507,82 @@ textarea.input { height: auto; min-height: 96px; padding: 8px 12px; resize: vert
 .install-done { margin-top: 20px; font-size: 13px; color: var(--success); font-weight: 600; }
 .install-error { margin-top: 12px; font-size: 12px; color: var(--danger); }
 
+/* ===== 版本管理 ===== */
+.btn-sm { height: 26px; padding: 0 10px; font-size: 12px; }
+.version-list {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+}
+.version-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+}
+.version-name { font-weight: 600; min-width: 72px; }
+.version-tag {
+  font-size: 11px;
+  line-height: 18px;
+  padding: 0 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.version-tag.stable { background: var(--success-soft); color: var(--success); }
+.version-tag.beta { background: var(--warning-soft); color: var(--warning); }
+.version-tag.current { background: var(--brand-soft); color: var(--brand); }
+.version-date { font-size: 12px; color: var(--text-3); margin-left: auto; }
+
+/* ===== 进度条（安装 / 更新 / 卸载） ===== */
+.progress-block { margin-top: 12px; width: 100%; }
+.progress-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+.progress-info .spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+.progress-check { color: var(--success); flex-shrink: 0; }
+.progress-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.progress-pct { color: var(--text-2); flex-shrink: 0; }
+.progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--brand);
+  transition: width 0.3s ease;
+}
+.progress-fill.done { background: var(--success); }
+.progress-fill.indeterminate { width: 40%; animation: slide-indeterminate 1.2s ease-in-out infinite; }
+@keyframes slide-indeterminate {
+  0% { margin-left: -40%; }
+  100% { margin-left: 100%; }
+}
+
 /* ===== 表单卡片（管理 / 设置） ===== */
 .form-card {
   background: var(--surface);

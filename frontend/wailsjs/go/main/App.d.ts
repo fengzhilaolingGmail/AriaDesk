@@ -12,6 +12,8 @@ export function AddURI(arg1:string):Promise<string>;
 
 export function BrowseDownloadDir():Promise<string>;
 
+export function CheckAria2Updates():Promise<Array<aria2.ReleaseInfo>>;
+
 export function Connect():Promise<void>;
 
 export function DeleteHistoryRecord(arg1:string):Promise<void>;
@@ -62,6 +64,10 @@ export function StartAria2():Promise<void>;
 
 export function StopAria2():Promise<void>;
 
+export function UninstallAria2():Promise<void>;
+
 export function UnpauseAll():Promise<void>;
 
 export function UnpauseTask(arg1:string):Promise<void>;
+
+export function UpdateAria2ToVersion(arg1:string):Promise<void>;

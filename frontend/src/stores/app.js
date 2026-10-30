@@ -26,7 +26,9 @@ export const useAppStore = defineStore('app', {
     tokenMasked: '',
     connectError: '',
     connecting: false,
-    install: { running: false, phase: '', lines: [], error: '' },
+    install: { running: false, phase: '', lines: [], error: '', percent: null },
+    versionCheck: { checking: false, checked: false, releases: [], error: '' },
+    update: { target: '', phase: '', lines: [], error: '', percent: null },
     about: null,
     eventsRegistered: false,
   }),
@@ -80,6 +82,26 @@ export const useAppStore = defineStore('app', {
         this.install.phase = data.phase || ''
         if (data.line) this.install.lines.push(data.line)
         if (data.phase === 'error') this.install.error = data.error || '安装失败'
+        if (data.phase === 'done') {
+          // 安装是异步的，完成后必须重新检测，否则界面停留在安装引导页
+          this.refreshDetect()
+          this.refreshState()
+        }
+      })
+      EventsOn('aria2:update', (data) => {
+        if (!data) return
+        this.update.phase = data.phase || ''
+        if (data.line) this.update.lines.push(data.line)
+        if (typeof data.percent === 'number' && data.percent >= 0) {
+          this.update.percent = data.percent
+        }
+        if (data.phase === 'error') this.update.error = data.error || '操作失败'
+        if (data.phase === 'done') {
+          this.update.percent = 100
+          ElMessage.success(this.update.target ? `已切换到 aria2 ${this.update.target}` : 'aria2 已卸载')
+          this.refreshDetect()
+          this.refreshState()
+        }
       })
       EventsOn('task:completed', (data) => {
         if (data?.name) ElMessage.success(`下载完成：${data.name}`)
@@ -123,7 +145,9 @@ export const useAppStore = defineStore('app', {
 
     async installAria2() {
       if (this.install.running) return
-      this.install = { running: true, phase: 'running', lines: [], error: '' }
+      this.install = { running: true, phase: 'running', lines: [], error: '', percent: null }
+      // 重新安装后，此前卸载/更新的结果状态不再有效，避免残留显示
+      this.update = { target: '', phase: '', lines: [], error: '', percent: null }
       try {
         await App.InstallAria2()
         await this.refreshDetect()
@@ -135,9 +159,48 @@ export const useAppStore = defineStore('app', {
       }
     },
 
+    async checkAria2Updates() {
+      if (this.versionCheck.checking) return
+      this.versionCheck.checking = true
+      this.versionCheck.error = ''
+      try {
+        this.versionCheck.releases = await App.CheckAria2Updates() || []
+        this.versionCheck.checked = true
+      } catch (e) {
+        this.versionCheck.error = String(e)
+      } finally {
+        this.versionCheck.checking = false
+      }
+    },
+
+    async updateAria2To(version) {
+      if (this.update.phase === 'running') return
+      this.update = { target: version, phase: 'running', lines: [], error: '', percent: null }
+      try {
+        await App.UpdateAria2ToVersion(version)
+      } catch (e) {
+        this.update.error = this.update.error || String(e)
+        this.update.phase = 'error'
+      }
+    },
+
+    async uninstallAria2() {
+      if (this.update.phase === 'running') return
+      this.update = { target: '', phase: 'running', lines: [], error: '', percent: null }
+      // 卸载后此前的“安装成功”状态不再有效，重置避免安装引导页误显示已安装
+      this.install = { running: false, phase: '', lines: [], error: '', percent: null }
+      try {
+        await App.UninstallAria2()
+      } catch (e) {
+        this.update.error = this.update.error || String(e)
+        this.update.phase = 'error'
+      }
+    },
+
     async startAria2() {
       await App.StartAria2()
-      await this.refreshState()
+      // 启动成功说明 aria2 可用，同步刷新检测结果，让管理页从安装引导切换到正常界面
+      await Promise.all([this.refreshDetect(), this.refreshState()])
     },
 
     async stopAria2() {
