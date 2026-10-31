@@ -9,5 +9,12 @@
   "author": {
     "name": "fengzhilaoling",
     "email": "fengzhilaoling@gmail.com"
+  },
+  "info": {
+    "companyName": "fengzhilaoling",
+    "productName": "AriaDesk",
+    "productVersion": "0.2.0",
+    "copyright": "Copyright © 2026 fengzhilaoling",
+    "comments": "Aria2 桌面下载管理器"
   }
 }

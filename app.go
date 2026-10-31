@@ -28,7 +28,7 @@ import (
 	"ariadesk/internal/tray"
 )
 
-const appVersion = "0.1.0"
+const appVersion = "0.2.0"
 
 type Aria2State struct {
 	Running   bool `json:"running"`
