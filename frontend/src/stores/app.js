@@ -13,6 +13,7 @@ const defaultSettings = () => ({
   historyMax: 1000,
   maxConcurrent: 0,
   browserExtEnabled: true,
+  autoShowOnPush: true,
 })
 
 export const useAppStore = defineStore('app', {

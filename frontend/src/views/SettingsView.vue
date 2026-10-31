@@ -80,6 +80,16 @@
         </button>
       </div>
 
+      <div class="setting-row">
+        <div class="setting-main">
+          <div class="setting-label">收到推送时显示窗口</div>
+          <div class="setting-desc">插件推送下载任务时，自动把窗口显示到前台并切换到首页</div>
+        </div>
+        <button class="switch" :class="{ off: !store.settings.autoShowOnPush }" @click="toggle('autoShowOnPush')">
+          <span class="knob"></span>
+        </button>
+      </div>
+
       <div class="kv-row">
         <div class="kv-key">服务状态</div>
         <div class="kv-val">

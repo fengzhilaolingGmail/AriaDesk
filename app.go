@@ -1303,6 +1303,13 @@ func (a *App) readyClient() (*rpc.Client, error) {
 func (a *App) notifyExtTask(name string) {
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, "task:ext-added", map[string]any{"name": name})
+		a.mu.RLock()
+		show := a.settings.AutoShowOnPush
+		a.mu.RUnlock()
+		if show {
+			runtime.WindowUnminimise(a.ctx)
+			runtime.WindowShow(a.ctx)
+		}
 	}
 	go func() {
 		notification := toast.Notification{

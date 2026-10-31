@@ -20,6 +20,8 @@ type Settings struct {
 	MaxConcurrent  int    `json:"maxConcurrent"`
 	// BrowserExtEnabled 浏览器插件联动开关：开启后在 20000~20005 监听本地推送服务
 	BrowserExtEnabled bool `json:"browserExtEnabled"`
+	// AutoShowOnPush 收到插件推送时自动把窗口显示到前台并切换到下载页
+	AutoShowOnPush bool `json:"autoShowOnPush"`
 }
 
 const (
@@ -55,14 +57,15 @@ func DefaultMaxConcurrent() int {
 func Default() Settings {
 	downloadDir := filepath.Join(os.Getenv("USERPROFILE"), "Downloads")
 	return Settings{
-		RPCPort:        6800,
-		DownloadDir:    downloadDir,
-		AutoStartAria2: true,
-		AutoStartApp:   false,
-		CloseToTray:    true,
-		HistoryMax:     DefaultHistoryMax,
-		MaxConcurrent:  DefaultMaxConcurrent(),
+		RPCPort:           6800,
+		DownloadDir:       downloadDir,
+		AutoStartAria2:    true,
+		AutoStartApp:      false,
+		CloseToTray:       true,
+		HistoryMax:        DefaultHistoryMax,
+		MaxConcurrent:     DefaultMaxConcurrent(),
 		BrowserExtEnabled: true,
+		AutoShowOnPush:    true,
 	}
 }
 

@@ -95,6 +95,7 @@ export namespace config {
 	    historyMax: number;
 	    maxConcurrent: number;
 	    browserExtEnabled: boolean;
+	    autoShowOnPush: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -111,6 +112,7 @@ export namespace config {
 	        this.historyMax = source["historyMax"];
 	        this.maxConcurrent = source["maxConcurrent"];
 	        this.browserExtEnabled = source["browserExtEnabled"];
+	        this.autoShowOnPush = source["autoShowOnPush"];
 	    }
 	}
 
