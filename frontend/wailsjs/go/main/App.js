@@ -78,8 +78,8 @@ export function OpenDownloadDir() {
   return window['go']['main']['App']['OpenDownloadDir']();
 }
 
-export function OpenFolder(arg1) {
-  return window['go']['main']['App']['OpenFolder'](arg1);
+export function OpenLocation(arg1) {
+  return window['go']['main']['App']['OpenLocation'](arg1);
 }
 
 export function OpenTaskDir(arg1) {

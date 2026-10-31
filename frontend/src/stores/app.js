@@ -263,7 +263,7 @@ export const useAppStore = defineStore('app', {
     async unpauseAll() { await App.UnpauseAll() },
     async purgeCompleted() { await App.PurgeCompleted() },
     async openTaskDir(gid) { await App.OpenTaskDir(gid) },
-    async openFolder(path) { await App.OpenFolder(path) },
+    async openLocation(path) { await App.OpenLocation(path) },
     async deleteHistoryRecord(gid) { await App.DeleteHistoryRecord(gid) },
 
     async browseDownloadDir() {

@@ -84,7 +84,7 @@
         @pause="(t) => run(() => store.pauseTask(t.gid))"
         @resume="(t) => run(() => store.unpauseTask(t.gid))"
         @remove="askRemove"
-        @openDir="(t) => run(() => (t.history ? store.openFolder(t.dir) : store.openTaskDir(t.gid)))"
+        @openDir="(t) => run(() => (t.history ? store.openLocation(t.filePath || t.dir) : store.openTaskDir(t.gid)))"
       />
     </template>
 

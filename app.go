@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/go-toast/toast"
@@ -945,16 +946,22 @@ func (a *App) DeleteHistoryRecord(gid string) error {
 	return nil
 }
 
-// OpenFolder 打开指定目录（用于历史记录的“打开目录”，此时任务已从 aria2 消失）
-func (a *App) OpenFolder(path string) error {
+// OpenLocation 打开历史记录的位置：文件用 explorer /select 定位并选中，目录直接打开
+// （历史记录中的任务已从 aria2 消失，只能依赖记录里保存的路径）
+func (a *App) OpenLocation(path string) error {
 	if path == "" {
-		return fmt.Errorf("该记录没有目录信息")
+		return fmt.Errorf("该记录没有位置信息")
 	}
 	p := filepath.Clean(path)
-	if _, err := os.Stat(p); err != nil {
-		return fmt.Errorf("目录不存在（可能已被移动或删除）：%s", p)
+	info, err := os.Stat(p)
+	if err != nil {
+		return fmt.Errorf("文件或目录不存在（可能已被移动或删除）：%s", p)
 	}
-	openPath(p)
+	if info.IsDir() {
+		openPath(p)
+	} else {
+		openSelect(p)
+	}
 	return nil
 }
 
@@ -966,7 +973,33 @@ func openPath(path string) {
 }
 
 func openSelect(path string) {
-	_ = exec.Command("explorer.exe", "/select,"+path).Run()
+	// explorer 的命令行解析与 Go 的参数转义不兼容：路径含空格时，由 Args 拼出的
+	// "/select,..." 会被 explorer 错误解析而打开无关目录，必须自行拼接原始命令行 /select,"path"
+	cmd := exec.Command("explorer.exe")
+	cmd.SysProcAttr = &syscall.SysProcAttr{CmdLine: `explorer.exe /select,"` + path + `"`}
+	// explorer 即使成功也常返回退出码 1，忽略错误
+	_ = cmd.Run()
+}
+
+// taskTarget 计算任务“打开文件位置”的目标路径（aria2 风格 "/" 分隔，未做本地化处理）：
+// 多文件 BT 任务定位到以任务名命名的目录，其余定位到第一个在磁盘上实际存在的文件
+// （部分下载时 Files[0] 可能未被选中而不存在）；找不到时返回空串。
+func taskTarget(t rpc.Task) string {
+	if len(t.Files) == 0 {
+		return ""
+	}
+	if len(t.Files) > 1 && t.BitTorrent.Info.Name != "" {
+		return t.Dir + "/" + t.BitTorrent.Info.Name
+	}
+	for _, f := range t.Files {
+		if f.Path == "" {
+			continue
+		}
+		if _, err := os.Stat(filepath.Clean(f.Path)); err == nil {
+			return f.Path
+		}
+	}
+	return ""
 }
 
 func (a *App) OpenTaskDir(gid string) error {
@@ -974,13 +1007,13 @@ func (a *App) OpenTaskDir(gid string) error {
 	if err != nil {
 		return err
 	}
-	t, err := client.TellStatus(a.ctx, gid, "files", "dir")
+	t, err := client.TellStatus(a.ctx, gid, "files", "dir", "bittorrent")
 	if err != nil {
 		return err
 	}
 	// aria2 返回的路径统一使用 "/" 分隔符，explorer /select 需要 Windows 反斜杠路径
-	if len(t.Files) > 0 && t.Files[0].Path != "" {
-		p := filepath.Clean(t.Files[0].Path)
+	if target := taskTarget(t); target != "" {
+		p := filepath.Clean(target)
 		if _, err := os.Stat(p); err == nil {
 			openSelect(p)
 			return nil
@@ -1141,6 +1174,7 @@ func (a *App) checkCompleted(stopped []rpc.Task) {
 			TotalLength:     t.TotalLength,
 			CompletedLength: t.CompletedLength,
 			Dir:             t.Dir,
+			FilePath:        taskTarget(t),
 			CompletedAt:     time.Now(),
 		}
 		if a.history.Add(rec) {

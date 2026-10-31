@@ -44,7 +44,7 @@ export function OpenDataDir():Promise<void>;
 
 export function OpenDownloadDir():Promise<void>;
 
-export function OpenFolder(arg1:string):Promise<void>;
+export function OpenLocation(arg1:string):Promise<void>;
 
 export function OpenTaskDir(arg1:string):Promise<void>;
 

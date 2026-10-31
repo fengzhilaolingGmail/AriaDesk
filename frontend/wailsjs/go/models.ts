@@ -125,6 +125,7 @@ export namespace history {
 	    totalLength: string;
 	    completedLength: string;
 	    dir: string;
+	    filePath?: string;
 	    // Go type: time
 	    completedAt: any;
 	
@@ -140,6 +141,7 @@ export namespace history {
 	        this.totalLength = source["totalLength"];
 	        this.completedLength = source["completedLength"];
 	        this.dir = source["dir"];
+	        this.filePath = source["filePath"];
 	        this.completedAt = this.convertValues(source["completedAt"], null);
 	    }
 	

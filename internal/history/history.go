@@ -20,7 +20,10 @@ type Record struct {
 	TotalLength     string    `json:"totalLength"`
 	CompletedLength string    `json:"completedLength"`
 	Dir             string    `json:"dir"`
-	CompletedAt     time.Time `json:"completedAt"`
+	// FilePath 任务完成时解析出的目标文件/目录路径（多文件 BT 为以任务名命名的目录），
+	// 用于“打开文件位置”定位；旧记录可能为空，前端回退到 Dir
+	FilePath    string    `json:"filePath,omitempty"`
+	CompletedAt time.Time `json:"completedAt"`
 }
 
 type Store struct {
