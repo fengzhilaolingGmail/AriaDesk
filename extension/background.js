@@ -109,7 +109,40 @@ function notify(title, message) {
   })
 }
 
-async function pushDownload({ url, filename = '', referer = '' }) {
+// 页面右上角浮动提示；tabId 缺省时投向当前活动标签页，
+// 目标页无法注入 content script（如 chrome:// 页面）时静默失败
+async function toastToTab(tabId, text, ok) {
+  if (tabId == null) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    tabId = tab && tab.id
+  }
+  if (tabId == null) return
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'ariadesk-toast', text: String(text).slice(0, 120), ok })
+  } catch { /* 页面不可注入时忽略，失败场景还有系统通知兜底 */ }
+}
+
+function taskName(url) {
+  if (url.startsWith('magnet:')) return '磁力链接任务'
+  try {
+    const base = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || '')
+    return base || url
+  } catch {
+    return url
+  }
+}
+
+async function reportSuccess(tabId, text) {
+  await toastToTab(tabId, text, true)
+}
+
+async function reportFailure(tabId, err) {
+  const text = err && err.message ? err.message : String(err)
+  notify('AriaDesk 推送失败', text)
+  await toastToTab(tabId, `推送失败：${text}`, false)
+}
+
+async function pushDownload({ url, filename = '', referer = '', tabId = null }) {
   const opts = await getOpts()
   const cookies = opts.sendCookies ? await getCookieHeader(url) : ''
   await apiPost('/api/download', {
@@ -119,7 +152,7 @@ async function pushDownload({ url, filename = '', referer = '' }) {
     cookies,
     userAgent: navigator.userAgent,
   })
-  notify('AriaDesk', '已推送下载任务')
+  await reportSuccess(tabId, `已推送到 AriaDesk：${filename || taskName(url)}`)
 }
 
 function bufToBase64(buf) {
@@ -133,13 +166,13 @@ function bufToBase64(buf) {
 }
 
 // 种子必须由插件带 Cookie 抓取字节再推送，直接把 URL 给 aria2 会在需登录站点 403
-async function pushTorrent(url, referer = '') {
+async function pushTorrent(url, referer = '', tabId = null) {
   const resp = await fetch(url, { credentials: 'include' })
   if (!resp.ok) throw new Error(`获取种子失败（HTTP ${resp.status}）`)
   const buf = await resp.arrayBuffer()
   const name = decodeURIComponent(url.split('/').pop().split('?')[0] || '') || 'download.torrent'
   await apiPost('/api/torrent', { name, dataBase64: bufToBase64(buf) })
-  notify('AriaDesk', '已推送种子任务')
+  await reportSuccess(tabId, `已推送种子任务：${name}`)
 }
 
 function isTorrentUrl(url) {
@@ -193,7 +226,7 @@ chrome.downloads.onCreated.addListener(async (item) => {
       await pushDownload({ url, referer: item.referrer || '' })
     }
   } catch (e) {
-    notify('AriaDesk 推送失败', e.message || String(e))
+    await reportFailure(null, e)
     if (opts.fallback && !torrent) {
       chrome.downloads.download({ url })
     }
@@ -219,16 +252,17 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId !== 'ariadesk-download' || !info.linkUrl) return
   const url = info.linkUrl
   const referer = (tab && tab.url) || ''
+  const tabId = (tab && tab.id) || null
   try {
     if (url.startsWith('magnet:')) {
-      await pushDownload({ url, referer })
+      await pushDownload({ url, referer, tabId })
     } else if (isTorrentUrl(url)) {
-      await pushTorrent(url, referer)
+      await pushTorrent(url, referer, tabId)
     } else {
-      await pushDownload({ url, referer })
+      await pushDownload({ url, referer, tabId })
     }
   } catch (e) {
-    notify('AriaDesk 推送失败', e.message || String(e))
+    await reportFailure(tabId, e)
   }
 })
 
@@ -236,8 +270,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === 'magnet' && typeof msg.url === 'string') {
-    pushDownload({ url: msg.url, referer: (sender && sender.url) || '' })
-      .catch((e) => notify('AriaDesk 推送失败', e.message || String(e)))
+    const tabId = sender && sender.tab && sender.tab.id
+    pushDownload({ url: msg.url, referer: (sender && sender.url) || '', tabId })
+      .catch((e) => reportFailure(tabId, e))
     return false
   }
   if (msg && msg.type === 'status') {
