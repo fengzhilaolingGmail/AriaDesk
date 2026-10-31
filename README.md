@@ -113,6 +113,14 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-extension.ps1
 - `token.pass` / `ext.pass` — RPC 密钥与插件配对 token（加密存储）
 - `aria2/aria2.conf`、`aria2/aria2.log`、`aria2/session.txt` — aria2 配置、日志与任务会话
 
+## 支持项目 / 赞助
+
+如果 AriaDesk 对你有帮助，欢迎请作者喝杯咖啡 ☕
+
+| 微信 | 支付宝 |
+|:---:|:---:|
+| <img src="images/wx.png" width="200" alt="微信收款码"> | <img src="images/zfb.jpg" width="200" alt="支付宝收款码"> |
+
 ## 开源协议
 
 [Apache License 2.0](LICENSE) · 作者：风之老凌
