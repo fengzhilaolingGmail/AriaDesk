@@ -26,6 +26,8 @@ export function GetAria2ConfSections():Promise<Array<aria2.ConfSection>>;
 
 export function GetAria2State():Promise<main.Aria2State>;
 
+export function GetExtInfo():Promise<main.ExtInfo>;
+
 export function GetGlobalStat():Promise<rpc.GlobalStat>;
 
 export function GetHistory():Promise<Array<history.Record>>;
@@ -54,11 +56,15 @@ export function PurgeCompleted():Promise<void>;
 
 export function ReadAria2Log():Promise<string>;
 
+export function RegenerateExtToken():Promise<void>;
+
 export function RegenerateToken():Promise<void>;
 
 export function RemoveTask(arg1:string,arg2:boolean):Promise<void>;
 
 export function ResetAria2Conf():Promise<void>;
+
+export function RevealExtToken():Promise<string>;
 
 export function RevealToken():Promise<string>;
 

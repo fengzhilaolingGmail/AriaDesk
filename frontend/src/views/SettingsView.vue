@@ -65,6 +65,44 @@
       </div>
     </div>
 
+    <!-- 浏览器插件 -->
+    <div class="form-card">
+      <div class="section-title has-desc">浏览器插件</div>
+      <div class="section-desc">接收浏览器插件推送的下载任务（普通链接 / 磁力 / 种子），插件通过本地端口与 AriaDesk 通信</div>
+
+      <div class="setting-row">
+        <div class="setting-main">
+          <div class="setting-label">启用浏览器联动</div>
+          <div class="setting-desc">在本机 20000 ~ 20005 端口范围内监听插件推送服务</div>
+        </div>
+        <button class="switch" :class="{ off: !store.settings.browserExtEnabled }" @click="toggle('browserExtEnabled')">
+          <span class="knob"></span>
+        </button>
+      </div>
+
+      <div class="kv-row">
+        <div class="kv-key">服务状态</div>
+        <div class="kv-val">
+          <span v-if="!store.settings.browserExtEnabled">已停用</span>
+          <span v-else-if="extInfo?.running">监听中，端口 <span class="mono">{{ extInfo.port }}</span></span>
+          <span v-else>未监听（20000 ~ 20005 均被占用）</span>
+        </div>
+      </div>
+
+      <div class="kv-row">
+        <div class="kv-key">配对 token</div>
+        <div class="kv-val">
+          <span class="mono">{{ extTokenRevealed ? extToken : '••••••••••••' }}</span>
+        </div>
+      </div>
+
+      <div class="kv-actions">
+        <button class="btn btn-default" @click="toggleExtToken">{{ extTokenRevealed ? '隐藏' : '显示' }} token</button>
+        <button class="btn btn-default" :disabled="extTokenBusy" @click="onRegenExtToken">重新生成</button>
+      </div>
+      <div class="setting-desc">token 用于插件与软件配对，需填写到插件设置页；重新生成后旧 token 立即失效</div>
+    </div>
+
     <!-- 关于 -->
     <div class="form-card">
       <div class="section-title">关于</div>
@@ -108,19 +146,59 @@ const store = useAppStore()
 const about = ref(null)
 const logVisible = ref(false)
 const logText = ref('')
+const extInfo = ref(null)
+const extToken = ref('')
+const extTokenRevealed = ref(false)
+const extTokenBusy = ref(false)
 
 onMounted(async () => {
   try {
     about.value = await store.loadAbout()
   } catch { /* 忽略，保持占位 */ }
+  await refreshExtInfo()
 })
+
+async function refreshExtInfo() {
+  try {
+    extInfo.value = await store.getExtInfo()
+  } catch { /* 保持占位 */ }
+}
 
 async function toggle(key) {
   const prev = store.settings[key]
   try {
     await store.saveSettings({ [key]: !prev })
+    if (key === 'browserExtEnabled') await refreshExtInfo()
   } catch (e) {
     ElMessage.error(`保存失败：${e}`)
+  }
+}
+
+async function toggleExtToken() {
+  if (extTokenRevealed.value) {
+    extTokenRevealed.value = false
+    extToken.value = ''
+    return
+  }
+  try {
+    extToken.value = await store.revealExtToken()
+    extTokenRevealed.value = true
+  } catch (e) {
+    ElMessage.error(String(e))
+  }
+}
+
+async function onRegenExtToken() {
+  extTokenBusy.value = true
+  try {
+    await store.regenerateExtToken()
+    extTokenRevealed.value = false
+    extToken.value = ''
+    ElMessage.success('已重新生成，请在插件设置中重新填写 token')
+  } catch (e) {
+    ElMessage.error(String(e))
+  } finally {
+    extTokenBusy.value = false
   }
 }
 

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	stdruntime "runtime"
 	"strings"
@@ -18,6 +20,7 @@ import (
 	"ariadesk/internal/aria2"
 	"ariadesk/internal/autostart"
 	"ariadesk/internal/config"
+	"ariadesk/internal/extsrv"
 	"ariadesk/internal/history"
 	"ariadesk/internal/rpc"
 	"ariadesk/internal/secret"
@@ -62,6 +65,9 @@ type App struct {
 	stoppedSeeded atomic.Bool
 
 	history *history.Store
+
+	extMu sync.Mutex
+	ext   *extsrv.Server
 }
 
 func NewApp(icon []byte) *App {
@@ -129,6 +135,10 @@ func (a *App) startup(ctx context.Context) {
 	})
 	a.emitState()
 
+	if s.BrowserExtEnabled {
+		a.startExtServer()
+	}
+
 	if s.AutoStartAria2 {
 		go func() {
 			time.Sleep(1500 * time.Millisecond)
@@ -156,6 +166,7 @@ func (a *App) onBeforeClose(ctx context.Context) bool {
 
 func (a *App) cleanup() {
 	a.stopPolling()
+	a.stopExtServer()
 	if a.proc.Running() {
 		a.stopAria2Process()
 	}
@@ -228,6 +239,13 @@ func (a *App) SaveSettings(s config.Settings) error {
 	if s.AutoStartApp != old.AutoStartApp {
 		if err := autostart.Set(s.AutoStartApp); err != nil {
 			return fmt.Errorf("更新开机自启失败: %w", err)
+		}
+	}
+	if s.BrowserExtEnabled != old.BrowserExtEnabled {
+		if s.BrowserExtEnabled {
+			a.startExtServer()
+		} else {
+			a.stopExtServer()
 		}
 	}
 	return nil
@@ -816,14 +834,14 @@ func (a *App) AddURI(uri string) (string, error) {
 }
 
 // dirOption 让新建任务始终使用当前设置的下载目录，与 aria2 启动时的 --dir 无关
-func (a *App) dirOption() map[string]string {
+func (a *App) dirOption() map[string]any {
 	a.mu.RLock()
 	dir := a.settings.DownloadDir
 	a.mu.RUnlock()
 	if dir == "" {
 		return nil
 	}
-	return map[string]string{"dir": dir}
+	return map[string]any{"dir": dir}
 }
 
 func (a *App) AddTorrentFile() (string, error) {
@@ -1151,4 +1169,169 @@ func (a *App) checkCompleted(stopped []rpc.Task) {
 			_ = notification.Push()
 		}(name)
 	}
+}
+
+// ---------- 浏览器插件推送服务 ----------
+
+type ExtInfo struct {
+	Enabled bool `json:"enabled"`
+	Running bool `json:"running"`
+	Port    int  `json:"port"`
+	PortMin int  `json:"portMin"`
+	PortMax int  `json:"portMax"`
+}
+
+func (a *App) GetExtInfo() (ExtInfo, error) {
+	a.mu.RLock()
+	enabled := a.settings.BrowserExtEnabled
+	a.mu.RUnlock()
+	a.extMu.Lock()
+	running := a.ext != nil && a.ext.Running()
+	port := 0
+	if running {
+		port = a.ext.Port()
+	}
+	a.extMu.Unlock()
+	return ExtInfo{
+		Enabled: enabled,
+		Running: running,
+		Port:    port,
+		PortMin: extsrv.PortMin,
+		PortMax: extsrv.PortMax,
+	}, nil
+}
+
+func (a *App) RevealExtToken() (string, error) {
+	return secret.LoadOrCreateExt()
+}
+
+// RegenerateExtToken 重新生成配对 token，旧 token 立即失效，插件侧需重新填写
+func (a *App) RegenerateExtToken() error {
+	token, err := secret.Generate()
+	if err != nil {
+		return err
+	}
+	return secret.SaveExt(token)
+}
+
+func (a *App) startExtServer() {
+	a.extMu.Lock()
+	defer a.extMu.Unlock()
+	if a.ext != nil && a.ext.Running() {
+		return
+	}
+	srv := extsrv.New(appVersion, secret.LoadOrCreateExt, extPushHandler{a: a})
+	if err := srv.Start(); err != nil {
+		if a.ctx != nil {
+			runtime.LogErrorf(a.ctx, "浏览器插件服务启动失败: %v", err)
+		}
+		return
+	}
+	a.ext = srv
+	if a.ctx != nil {
+		runtime.LogInfof(a.ctx, "浏览器插件服务已监听 127.0.0.1:%d", srv.Port())
+	}
+}
+
+func (a *App) stopExtServer() {
+	a.extMu.Lock()
+	defer a.extMu.Unlock()
+	if a.ext != nil {
+		a.ext.Stop()
+		a.ext = nil
+	}
+}
+
+// readyClient 返回可用的 aria2 客户端；未运行时先尝试拉起，失败则告知插件
+func (a *App) readyClient() (*rpc.Client, error) {
+	if a.connected.Load() {
+		if c := a.getClient(); c != nil {
+			return c, nil
+		}
+	}
+	if err := a.StartAria2(); err != nil {
+		return nil, fmt.Errorf("%w: %v", extsrv.ErrAria2NotRunning, err)
+	}
+	c := a.getClient()
+	if c == nil || !a.connected.Load() {
+		return nil, extsrv.ErrAria2NotRunning
+	}
+	return c, nil
+}
+
+func (a *App) notifyExtTask(name string) {
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "task:ext-added", map[string]any{"name": name})
+	}
+	go func() {
+		notification := toast.Notification{
+			AppID:   "AriaDesk",
+			Title:   "已接收浏览器下载任务",
+			Message: name,
+		}
+		_ = notification.Push()
+	}()
+}
+
+func extTaskName(raw string) string {
+	if strings.HasPrefix(raw, "magnet:") {
+		return "磁力链接任务"
+	}
+	if u, err := url.Parse(raw); err == nil {
+		if b := path.Base(u.Path); b != "." && b != "/" && b != "" {
+			return b
+		}
+	}
+	return raw
+}
+
+type extPushHandler struct{ a *App }
+
+func (h extPushHandler) AddDownload(req extsrv.DownloadRequest) (string, error) {
+	client, err := h.a.readyClient()
+	if err != nil {
+		return "", err
+	}
+	opts := h.a.dirOption()
+	if opts == nil {
+		opts = map[string]any{}
+	}
+	var headers []string
+	if req.Cookies != "" {
+		headers = append(headers, "Cookie: "+req.Cookies)
+	}
+	if req.Referer != "" {
+		headers = append(headers, "Referer: "+req.Referer)
+	}
+	if req.UserAgent != "" {
+		headers = append(headers, "User-Agent: "+req.UserAgent)
+	}
+	if len(headers) > 0 {
+		opts["header"] = headers
+	}
+	if req.Filename != "" {
+		opts["out"] = req.Filename
+	}
+	gid, err := client.AddURI(h.a.ctx, req.URL, opts)
+	if err != nil {
+		return "", err
+	}
+	h.a.notifyExtTask(extTaskName(req.URL))
+	return gid, nil
+}
+
+func (h extPushHandler) AddTorrent(name string, data []byte) (string, error) {
+	client, err := h.a.readyClient()
+	if err != nil {
+		return "", err
+	}
+	gid, err := client.AddTorrent(h.a.ctx, data, h.a.dirOption())
+	if err != nil {
+		return "", err
+	}
+	if name == "" {
+		name = "种子任务"
+	}
+	h.a.notifyExtTask(name)
+	return gid, nil
 }

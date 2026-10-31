@@ -18,6 +18,8 @@ type Settings struct {
 	CloseToTray    bool   `json:"closeToTray"`
 	HistoryMax     int    `json:"historyMax"`
 	MaxConcurrent  int    `json:"maxConcurrent"`
+	// BrowserExtEnabled 浏览器插件联动开关：开启后在 20000~20005 监听本地推送服务
+	BrowserExtEnabled bool `json:"browserExtEnabled"`
 }
 
 const (
@@ -60,6 +62,7 @@ func Default() Settings {
 		CloseToTray:    true,
 		HistoryMax:     DefaultHistoryMax,
 		MaxConcurrent:  DefaultMaxConcurrent(),
+		BrowserExtEnabled: true,
 	}
 }
 

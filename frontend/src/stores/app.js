@@ -12,6 +12,7 @@ const defaultSettings = () => ({
   closeToTray: true,
   historyMax: 1000,
   maxConcurrent: 0,
+  browserExtEnabled: true,
 })
 
 export const useAppStore = defineStore('app', {
@@ -219,6 +220,18 @@ export const useAppStore = defineStore('app', {
     async regenerateToken() {
       await App.RegenerateToken()
       await this.refreshToken()
+    },
+
+    async getExtInfo() {
+      return await App.GetExtInfo()
+    },
+
+    async revealExtToken() {
+      return await App.RevealExtToken()
+    },
+
+    async regenerateExtToken() {
+      await App.RegenerateExtToken()
     },
 
     async fetchTasks(tab) {

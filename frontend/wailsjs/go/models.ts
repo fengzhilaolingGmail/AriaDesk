@@ -94,6 +94,7 @@ export namespace config {
 	    closeToTray: boolean;
 	    historyMax: number;
 	    maxConcurrent: number;
+	    browserExtEnabled: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -109,6 +110,7 @@ export namespace config {
 	        this.closeToTray = source["closeToTray"];
 	        this.historyMax = source["historyMax"];
 	        this.maxConcurrent = source["maxConcurrent"];
+	        this.browserExtEnabled = source["browserExtEnabled"];
 	    }
 	}
 
@@ -198,6 +200,26 @@ export namespace main {
 	        this.pid = source["pid"];
 	        this.port = source["port"];
 	        this.connected = source["connected"];
+	    }
+	}
+	export class ExtInfo {
+	    enabled: boolean;
+	    running: boolean;
+	    port: number;
+	    portMin: number;
+	    portMax: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ExtInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.running = source["running"];
+	        this.port = source["port"];
+	        this.portMin = source["portMin"];
+	        this.portMax = source["portMax"];
 	    }
 	}
 

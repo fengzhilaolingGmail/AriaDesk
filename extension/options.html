@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>AriaDesk 下载助手设置</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { max-width: 560px; margin: 32px auto; padding: 0 16px; font-family: system-ui, "Microsoft YaHei", sans-serif; font-size: 13px; color: #27272a; }
+    h1 { font-size: 18px; margin-bottom: 20px; }
+    .card { border: 1px solid #e4e4e7; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .card h2 { font-size: 14px; margin-bottom: 4px; }
+    .desc { color: #71717a; font-size: 12px; margin-bottom: 12px; }
+    label.field { display: block; margin-bottom: 12px; }
+    label.field span { display: block; margin-bottom: 4px; font-weight: 500; }
+    input[type=text], input[type=password], input[type=number], textarea {
+      width: 100%; padding: 7px 10px; border: 1px solid #d4d4d8; border-radius: 6px; font-size: 13px; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 72px; }
+    label.check { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; }
+    button { padding: 8px 16px; border-radius: 6px; border: none; background: #2e62f6; color: #fff; cursor: pointer; font-size: 13px; }
+    button:hover { background: #2554d6; }
+    button.ghost { background: #fff; border: 1px solid #d4d4d8; color: #27272a; margin-left: 8px; }
+    button.ghost:hover { background: #f4f4f5; }
+    #msg { margin-top: 12px; font-size: 12px; min-height: 16px; }
+    #msg.ok { color: #16a34a; }
+    #msg.err { color: #dc2626; }
+  </style>
+</head>
+<body>
+  <h1>AriaDesk 下载助手设置</h1>
+
+  <div class="card">
+    <h2>配对</h2>
+    <div class="desc">token 在 AriaDesk「设置 → 浏览器插件」中查看，复制后粘贴到此处</div>
+    <label class="field">
+      <span>配对 token</span>
+      <input type="password" id="token" placeholder="粘贴 AriaDesk 中的配对 token">
+    </label>
+    <button id="saveToken">保存</button>
+    <button class="ghost" id="test">测试连接</button>
+  </div>
+
+  <div class="card">
+    <h2>下载接管</h2>
+    <div class="desc">点击下载链接时取消浏览器下载，改由 AriaDesk 下载</div>
+    <label class="check"><input type="checkbox" id="enabled"> 接管浏览器下载</label>
+    <label class="check"><input type="checkbox" id="sendCookies"> 推送时附带站点 Cookie（PT / 网盘等需登录资源必需）</label>
+    <label class="check"><input type="checkbox" id="fallback"> 推送失败时回退为浏览器下载</label>
+    <label class="field">
+      <span>小于该体积不接管（MB，0 为不限制）</span>
+      <input type="number" id="minSizeMB" min="0" step="1">
+    </label>
+    <label class="field">
+      <span>域名黑名单（每行一个，这些站点的下载不接管）</span>
+      <textarea id="blacklist" placeholder="example.com"></textarea>
+    </label>
+    <button id="saveOpts">保存</button>
+  </div>
+
+  <div id="msg"></div>
+  <script src="options.js"></script>
+</body>
+</html>

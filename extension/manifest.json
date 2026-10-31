@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "AriaDesk 下载助手",
+  "version": "0.1.0",
+  "description": "把浏览器中的下载链接（普通链接 / 磁力 / 种子）推送到 AriaDesk，由 aria2 自动下载",
+  "permissions": ["downloads", "contextMenus", "storage", "notifications", "cookies"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AriaDesk"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  }
+}

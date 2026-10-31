@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 260px; padding: 16px; font-family: system-ui, "Microsoft YaHei", sans-serif; font-size: 13px; color: #27272a; }
+    .title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .title img { width: 20px; height: 20px; }
+    .status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: #f4f4f5; margin-bottom: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #a1a1aa; flex-shrink: 0; }
+    .dot.ok { background: #16a34a; }
+    .dot.err { background: #dc2626; }
+    .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .switch { position: relative; width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer; background: #2e62f6; transition: background .2s; }
+    .switch.off { background: #d4d4d8; }
+    .knob { position: absolute; top: 2px; left: 18px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .2s; }
+    .switch.off .knob { left: 2px; }
+    .actions { display: flex; gap: 8px; }
+    button.btn { flex: 1; padding: 7px 0; border-radius: 6px; border: 1px solid #d4d4d8; background: #fff; cursor: pointer; font-size: 12px; color: #27272a; }
+    button.btn:hover { background: #f4f4f5; }
+    button.btn.primary { background: #2e62f6; border-color: #2e62f6; color: #fff; }
+    button.btn.primary:hover { background: #2554d6; }
+  </style>
+</head>
+<body>
+  <div class="title"><img src="icons/icon.png" alt="">AriaDesk 下载助手</div>
+  <div class="status">
+    <span class="dot" id="dot"></span>
+    <span id="statusText">检测中…</span>
+  </div>
+  <div class="row">
+    <span>接管浏览器下载</span>
+    <button class="switch off" id="toggleEnabled"><span class="knob"></span></button>
+  </div>
+  <div class="actions">
+    <button class="btn" id="btnReconnect">重新连接</button>
+    <button class="btn primary" id="btnOptions">设置</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

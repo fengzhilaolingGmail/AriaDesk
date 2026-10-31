@@ -131,7 +131,7 @@ func (c *Client) TellStatus(ctx context.Context, gid string, keys ...string) (Ta
 	return t, err
 }
 
-func (c *Client) AddURI(ctx context.Context, uri string, options map[string]string) (string, error) {
+func (c *Client) AddURI(ctx context.Context, uri string, options map[string]any) (string, error) {
 	var gid string
 	params := []any{[]string{uri}}
 	if len(options) > 0 {
@@ -141,7 +141,7 @@ func (c *Client) AddURI(ctx context.Context, uri string, options map[string]stri
 	return gid, err
 }
 
-func (c *Client) AddTorrent(ctx context.Context, data []byte, options map[string]string) (string, error) {
+func (c *Client) AddTorrent(ctx context.Context, data []byte, options map[string]any) (string, error) {
 	var gid string
 	encoded := base64.StdEncoding.EncodeToString(data)
 	params := []any{encoded}

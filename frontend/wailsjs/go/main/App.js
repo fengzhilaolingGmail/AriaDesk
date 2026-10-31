@@ -42,6 +42,10 @@ export function GetAria2State() {
   return window['go']['main']['App']['GetAria2State']();
 }
 
+export function GetExtInfo() {
+  return window['go']['main']['App']['GetExtInfo']();
+}
+
 export function GetGlobalStat() {
   return window['go']['main']['App']['GetGlobalStat']();
 }
@@ -98,6 +102,10 @@ export function ReadAria2Log() {
   return window['go']['main']['App']['ReadAria2Log']();
 }
 
+export function RegenerateExtToken() {
+  return window['go']['main']['App']['RegenerateExtToken']();
+}
+
 export function RegenerateToken() {
   return window['go']['main']['App']['RegenerateToken']();
 }
@@ -108,6 +116,10 @@ export function RemoveTask(arg1, arg2) {
 
 export function ResetAria2Conf() {
   return window['go']['main']['App']['ResetAria2Conf']();
+}
+
+export function RevealExtToken() {
+  return window['go']['main']['App']['RevealExtToken']();
 }
 
 export function RevealToken() {

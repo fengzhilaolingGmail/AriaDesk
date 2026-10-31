@@ -30,6 +30,11 @@ func FilePath() string {
 	return filepath.Join(config.DataDir(), "token.pass")
 }
 
+// ExtFilePath 浏览器插件配对 token 的存储路径，与 aria2 rpc-secret 隔离
+func ExtFilePath() string {
+	return filepath.Join(config.DataDir(), "ext.pass")
+}
+
 func protect(data []byte) ([]byte, error) {
 	var in, out dataBlob
 	in.cbData = uint32(len(data))
@@ -77,6 +82,31 @@ func Generate() (string, error) {
 }
 
 func Save(token string) error {
+	return saveTo(FilePath(), token)
+}
+
+func Load() (string, error) {
+	return loadFrom(FilePath())
+}
+
+func LoadOrCreate() (string, error) {
+	return loadOrCreate(FilePath())
+}
+
+// SaveExt / LoadExt / LoadOrCreateExt 为浏览器插件配对 token 的存取
+func SaveExt(token string) error {
+	return saveTo(ExtFilePath(), token)
+}
+
+func LoadExt() (string, error) {
+	return loadFrom(ExtFilePath())
+}
+
+func LoadOrCreateExt() (string, error) {
+	return loadOrCreate(ExtFilePath())
+}
+
+func saveTo(path, token string) error {
 	if err := os.MkdirAll(config.DataDir(), 0o755); err != nil {
 		return err
 	}
@@ -84,11 +114,11 @@ func Save(token string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(FilePath(), enc, 0o600)
+	return os.WriteFile(path, enc, 0o600)
 }
 
-func Load() (string, error) {
-	data, err := os.ReadFile(FilePath())
+func loadFrom(path string) (string, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -99,8 +129,8 @@ func Load() (string, error) {
 	return string(dec), nil
 }
 
-func LoadOrCreate() (string, error) {
-	token, err := Load()
+func loadOrCreate(path string) (string, error) {
+	token, err := loadFrom(path)
 	if err == nil && strings.TrimSpace(token) != "" {
 		return token, nil
 	}
@@ -111,7 +141,7 @@ func LoadOrCreate() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := Save(token); err != nil {
+	if err := saveTo(path, token); err != nil {
 		return "", err
 	}
 	return token, nil
