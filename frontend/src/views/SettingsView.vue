@@ -129,6 +129,18 @@
         <div class="kv-key">数据目录</div>
         <div class="kv-val"><span class="mono">{{ about?.dataDir || '—' }}</span></div>
       </div>
+      <div class="kv-row">
+        <div class="kv-key">GitHub</div>
+        <div class="kv-val"><a class="link" @click="openURL('https://github.com/fengzhilaolingGmail/AriaDesk')">github.com/fengzhilaolingGmail/AriaDesk</a></div>
+      </div>
+      <div class="kv-row">
+        <div class="kv-key">作者</div>
+        <div class="kv-val">风之老凌</div>
+      </div>
+      <div class="kv-row">
+        <div class="kv-key">开源协议</div>
+        <div class="kv-val"><a class="link" @click="openURL('https://github.com/fengzhilaolingGmail/AriaDesk?tab=Apache-2.0-1-ov-file')">Apache License 2.0</a></div>
+      </div>
 
       <div class="kv-actions">
         <button class="btn btn-default" @click="openLog">查看日志</button>
@@ -149,9 +161,14 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index'
+import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
 import { useAppStore } from '../stores/app'
 
 const store = useAppStore()
+
+function openURL(url) {
+  BrowserOpenURL(url)
+}
 
 const about = ref(null)
 const logVisible = ref(false)
