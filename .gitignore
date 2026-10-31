@@ -3,6 +3,9 @@ build/bin
 node_modules
 frontend/dist
 
+# 编辑器本地历史
+.history/
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
