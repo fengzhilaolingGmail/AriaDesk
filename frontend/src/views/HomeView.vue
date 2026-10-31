@@ -96,6 +96,10 @@
       <p v-if="removeTarget" class="mono" style="font-size: 12px; color: var(--text-2); margin-top: 6px; word-break: break-all;">
         {{ taskName(removeTarget) }}
       </p>
+      <label style="display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--text-1); cursor: pointer;">
+        <input type="checkbox" v-model="removeWithFiles" />
+        同时删除已下载的文件
+      </label>
       <template #footer>
         <button class="btn btn-default" @click="removeVisible = false">取消</button>
         <button class="btn btn-danger" @click="confirmRemove">删除</button>
@@ -138,6 +142,7 @@ const activeTab = ref('all')
 const newTaskVisible = ref(false)
 const removeVisible = ref(false)
 const removeTarget = ref(null)
+const removeWithFiles = ref(false)
 const purgeVisible = ref(false)
 
 const currentTasks = computed(() => {
@@ -242,19 +247,21 @@ async function confirmPurge() {
 
 function askRemove(task) {
   removeTarget.value = task
+  removeWithFiles.value = false
   removeVisible.value = true
 }
 
 async function confirmRemove() {
   const task = removeTarget.value
+  const withFiles = removeWithFiles.value
   removeVisible.value = false
   if (!task) return
   if (task.history) {
-    await run(() => store.deleteHistoryRecord(task.gid))
+    await run(() => store.deleteHistoryRecord(task.gid, withFiles))
     return
   }
   // 已完成/出错/已移除的记录走 removeDownloadResult，其余走 remove
   const stopped = ['complete', 'error', 'removed'].includes(task.status)
-  await run(() => store.removeTask(task.gid, stopped))
+  await run(() => store.removeTask(task.gid, stopped, withFiles))
 }
 </script>

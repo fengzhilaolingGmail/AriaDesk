@@ -16,7 +16,7 @@ export function CheckAria2Updates():Promise<Array<aria2.ReleaseInfo>>;
 
 export function Connect():Promise<void>;
 
-export function DeleteHistoryRecord(arg1:string):Promise<void>;
+export function DeleteHistoryRecord(arg1:string,arg2:boolean):Promise<void>;
 
 export function DetectAria2():Promise<aria2.DetectResult>;
 
@@ -60,7 +60,7 @@ export function RegenerateExtToken():Promise<void>;
 
 export function RegenerateToken():Promise<void>;
 
-export function RemoveTask(arg1:string,arg2:boolean):Promise<void>;
+export function RemoveTask(arg1:string,arg2:boolean,arg3:boolean):Promise<void>;
 
 export function ResetAria2Conf():Promise<void>;
 

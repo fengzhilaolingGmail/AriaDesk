@@ -259,13 +259,13 @@ export const useAppStore = defineStore('app', {
 
     async pauseTask(gid) { await App.PauseTask(gid) },
     async unpauseTask(gid) { await App.UnpauseTask(gid) },
-    async removeTask(gid, stopped) { await App.RemoveTask(gid, stopped) },
+    async removeTask(gid, stopped, removeFiles) { await App.RemoveTask(gid, stopped, removeFiles) },
     async pauseAll() { await App.PauseAll() },
     async unpauseAll() { await App.UnpauseAll() },
     async purgeCompleted() { await App.PurgeCompleted() },
     async openTaskDir(gid) { await App.OpenTaskDir(gid) },
     async openLocation(path) { await App.OpenLocation(path) },
-    async deleteHistoryRecord(gid) { await App.DeleteHistoryRecord(gid) },
+    async deleteHistoryRecord(gid, removeFiles) { await App.DeleteHistoryRecord(gid, removeFiles) },
 
     async browseDownloadDir() {
       return await App.BrowseDownloadDir()

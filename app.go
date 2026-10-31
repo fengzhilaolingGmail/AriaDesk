@@ -889,10 +889,40 @@ func (a *App) UnpauseTask(gid string) error {
 	return client.Unpause(a.ctx, gid)
 }
 
-func (a *App) RemoveTask(gid string, stopped bool) error {
+// removeTaskFiles 删除任务对应的已下载文件：多文件 BT 删除任务名目录，
+// 其余逐个删除文件及其 .aria2 控制文件；失败仅忽略，不影响任务记录的删除
+func removeTaskFiles(t rpc.Task) {
+	if len(t.Files) == 0 {
+		return
+	}
+	if len(t.Files) > 1 && t.BitTorrent.Info.Name != "" {
+		p := filepath.Clean(t.Dir + "/" + t.BitTorrent.Info.Name)
+		_ = os.RemoveAll(p)
+		_ = os.Remove(p + ".aria2")
+		return
+	}
+	for _, f := range t.Files {
+		if f.Path == "" {
+			continue
+		}
+		p := filepath.Clean(f.Path)
+		_ = os.Remove(p)
+		_ = os.Remove(p + ".aria2")
+	}
+}
+
+func (a *App) RemoveTask(gid string, stopped bool, removeFiles bool) error {
 	client, err := a.requireClient()
 	if err != nil {
 		return err
+	}
+	var task rpc.Task
+	if removeFiles {
+		// 删除前先取出文件列表，任务移除后 aria2 不再保留路径信息
+		task, err = client.TellStatus(a.ctx, gid, "files", "dir", "bittorrent")
+		if err != nil {
+			return err
+		}
 	}
 	if stopped {
 		if err := client.RemoveDownloadResult(a.ctx, gid); err != nil {
@@ -902,6 +932,9 @@ func (a *App) RemoveTask(gid string, stopped bool) error {
 		if err := client.ForceRemove(a.ctx, gid); err != nil {
 			return err
 		}
+	}
+	if removeFiles {
+		removeTaskFiles(task)
 	}
 	// 同一 gid 的本地历史记录一并删除，否则 aria2 侧删除后历史记录会顶上来，需要再删一次
 	if a.history.Remove(gid) {
@@ -950,7 +983,23 @@ func (a *App) GetHistory() []history.Record {
 	return a.history.List()
 }
 
-func (a *App) DeleteHistoryRecord(gid string) error {
+func (a *App) DeleteHistoryRecord(gid string, removeFiles bool) error {
+	if removeFiles {
+		for _, r := range a.history.List() {
+			if r.Gid != gid || r.FilePath == "" {
+				continue
+			}
+			p := filepath.Clean(r.FilePath)
+			if info, err := os.Stat(p); err == nil {
+				if info.IsDir() {
+					_ = os.RemoveAll(p)
+				} else {
+					_ = os.Remove(p)
+					_ = os.Remove(p + ".aria2")
+				}
+			}
+		}
+	}
 	if a.history.Remove(gid) {
 		a.emitHistory()
 	}

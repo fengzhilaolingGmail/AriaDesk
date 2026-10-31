@@ -22,8 +22,8 @@ export function Connect() {
   return window['go']['main']['App']['Connect']();
 }
 
-export function DeleteHistoryRecord(arg1) {
-  return window['go']['main']['App']['DeleteHistoryRecord'](arg1);
+export function DeleteHistoryRecord(arg1, arg2) {
+  return window['go']['main']['App']['DeleteHistoryRecord'](arg1, arg2);
 }
 
 export function DetectAria2() {
@@ -110,8 +110,8 @@ export function RegenerateToken() {
   return window['go']['main']['App']['RegenerateToken']();
 }
 
-export function RemoveTask(arg1, arg2) {
-  return window['go']['main']['App']['RemoveTask'](arg1, arg2);
+export function RemoveTask(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RemoveTask'](arg1, arg2, arg3);
 }
 
 export function ResetAria2Conf() {
