@@ -110,7 +110,7 @@ function notify(title, message) {
 }
 
 // 注入到页面里画 toast 的函数，必须自包含（会被序列化后在页面上下文执行）
-function showToastInPage(text, ok) {
+function showToastInPage(text, color) {
   const el = document.createElement('div')
   el.textContent = text
   Object.assign(el.style, {
@@ -123,7 +123,7 @@ function showToastInPage(text, ok) {
     fontSize: '13px',
     fontFamily: 'system-ui, "Microsoft YaHei", sans-serif',
     color: '#fff',
-    background: ok ? '#16a34a' : '#dc2626',
+    background: color,
     boxShadow: '0 4px 12px rgba(0,0,0,.25)',
     maxWidth: '360px',
     overflow: 'hidden',
@@ -143,10 +143,15 @@ function showToastInPage(text, ok) {
   }, 3000)
 }
 
+// toast 颜色：推送成功蓝、下载完成绿、失败红
+const TOAST_PUSH = '#2e62f6'
+const TOAST_COMPLETE = '#16a34a'
+const TOAST_ERROR = '#dc2626'
+
 // 页面右上角浮动提示；tabId 缺省时投向当前活动标签页。
 // content script 未注入（页面在插件加载前打开）时改为程序化注入；
 // 仍失败（chrome:// 等不可注入页面）返回 false，由调用方回退系统通知。
-async function toastToTab(tabId, text, ok) {
+async function toastToTab(tabId, text, color) {
   try {
     if (tabId == null) {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -155,13 +160,13 @@ async function toastToTab(tabId, text, ok) {
     if (tabId == null) return false
     const clipped = String(text).slice(0, 120)
     try {
-      await chrome.tabs.sendMessage(tabId, { type: 'ariadesk-toast', text: clipped, ok })
+      await chrome.tabs.sendMessage(tabId, { type: 'ariadesk-toast', text: clipped, color })
       return true
     } catch {
       await chrome.scripting.executeScript({
         target: { tabId },
         func: showToastInPage,
-        args: [clipped, !!ok],
+        args: [clipped, color],
       })
       return true
     }
@@ -182,7 +187,7 @@ function taskName(url) {
 
 async function reportSuccess(tabId, text) {
   console.info('[AriaDesk]', text)
-  const delivered = await toastToTab(tabId, text, true)
+  const delivered = await toastToTab(tabId, text, TOAST_PUSH)
   // 页面不可注入时回退系统通知，保证成功一定有可见反馈
   if (!delivered) notify('AriaDesk', text)
 }
@@ -191,7 +196,7 @@ async function reportFailure(tabId, err) {
   const text = err && err.message ? err.message : String(err)
   console.warn('[AriaDesk] 推送失败:', text)
   notify('AriaDesk 推送失败', text)
-  await toastToTab(tabId, `推送失败：${text}`, false)
+  await toastToTab(tabId, `推送失败：${text}`, TOAST_ERROR)
 }
 
 async function pushDownload({ url, filename = '', referer = '', tabId = null }) {
@@ -368,4 +373,38 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true
   }
   return false
+})
+
+// ---------- 下载完成通知（轮询软件事件） ----------
+
+// 轮询 AriaDesk 的完成事件并在浏览器页面弹出绿底提示。
+// boot 参数用于识别软件重启（事件序号会重置），boot 不一致时服务端忽略 since。
+async function pollEvents() {
+  try {
+    const opts = await getOpts()
+    if (!opts.token) return
+    let port = await getPort()
+    if (!port) {
+      port = await discoverPort()
+      if (!port) return
+    }
+    const stored = await chrome.storage.local.get(['lastEventId', 'extBoot'])
+    const url = `http://127.0.0.1:${port}/api/events?since=${stored.lastEventId || 0}&boot=${stored.extBoot || 0}`
+    const resp = await fetch(url, { headers: { 'X-AriaDesk-Token': opts.token } })
+    if (!resp.ok) return
+    const data = await resp.json()
+    for (const ev of data.events || []) {
+      console.info('[AriaDesk] 下载完成:', ev.name)
+      const delivered = await toastToTab(null, `下载完成：${ev.name}`, TOAST_COMPLETE)
+      if (!delivered) notify('AriaDesk 下载完成', ev.name)
+    }
+    await chrome.storage.local.set({ lastEventId: data.latest || 0, extBoot: data.boot || 0 })
+  } catch { /* 软件未运行等异常，静默跳过等下一轮 */ }
+}
+
+// service worker 存活期间每 10s 轮询；alarms 兜底保证 SW 休眠后至少每 30s 唤醒一次
+setInterval(pollEvents, 10000)
+chrome.alarms.create('ariadesk-poll', { periodInMinutes: 0.5 })
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'ariadesk-poll') pollEvents()
 })

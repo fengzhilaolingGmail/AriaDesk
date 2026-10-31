@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -42,16 +43,26 @@ type TorrentRequest struct {
 	DataBase64 string `json:"dataBase64"`
 }
 
+// Event 下载完成事件，供插件轮询后在浏览器侧弹提示
+type Event struct {
+	ID   uint64 `json:"id"`
+	Name string `json:"name"`
+	At   int64  `json:"at"`
+}
+
 // Handler 由 App 实现，负责把校验过的请求落到 aria2。
 type Handler interface {
 	AddDownload(req DownloadRequest) (gid string, err error)
 	AddTorrent(name string, data []byte) (gid string, err error)
+	// RecentEvents 返回 ID 大于 since 的完成事件及当前最新序号
+	RecentEvents(since uint64) (events []Event, latest uint64)
 }
 
 type Server struct {
 	appVersion string
 	tokenFunc  func() (string, error)
 	handler    Handler
+	boot       int64
 
 	mu      sync.Mutex
 	httpSrv *http.Server
@@ -88,6 +99,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /api/ping", s.handlePing)
 	mux.HandleFunc("POST /api/download", s.withAuth(s.handleDownload))
 	mux.HandleFunc("POST /api/torrent", s.withAuth(s.handleTorrent))
+	mux.HandleFunc("GET /api/events", s.withAuth(s.handleEvents))
+
+	s.boot = time.Now().Unix()
 
 	s.httpSrv = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	s.port = port
@@ -146,6 +160,27 @@ func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
 		"app":     "AriaDesk",
 		"version": s.appVersion,
 		"api":     APIVersion,
+		"boot":    s.boot,
+	})
+}
+
+// handleEvents 返回下载完成事件。boot 与服务启动时间不一致说明软件重启过，
+// 事件序号已重置，忽略客户端的 since 从头返回（队列重启后为空，不会重放旧事件）
+func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	since, _ := strconv.ParseUint(q.Get("since"), 10, 64)
+	boot, _ := strconv.ParseInt(q.Get("boot"), 10, 64)
+	if boot != s.boot {
+		since = 0
+	}
+	events, latest := s.handler.RecentEvents(since)
+	if events == nil {
+		events = []Event{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"boot":   s.boot,
+		"latest": latest,
+		"events": events,
 	})
 }
 

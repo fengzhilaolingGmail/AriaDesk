@@ -69,6 +69,10 @@ type App struct {
 
 	extMu sync.Mutex
 	ext   *extsrv.Server
+
+	extEvtMu  sync.Mutex
+	extEvtSeq uint64
+	extEvents []extsrv.Event
 }
 
 func NewApp(icon []byte) *App {
@@ -1198,6 +1202,7 @@ func (a *App) checkCompleted(stopped []rpc.Task) {
 		a.emitHistory()
 	}
 	for _, name := range completed {
+		a.recordExtEvent(name)
 		if a.ctx != nil {
 			runtime.EventsEmit(a.ctx, "task:completed", map[string]any{"name": name})
 		}
@@ -1382,4 +1387,28 @@ func (h extPushHandler) AddTorrent(name string, data []byte) (string, error) {
 	}
 	h.a.notifyExtTask(name)
 	return gid, nil
+}
+
+// recordExtEvent 记录一条下载完成事件，供浏览器插件轮询后弹提示；队列最多保留 100 条
+func (a *App) recordExtEvent(name string) {
+	a.extEvtMu.Lock()
+	a.extEvtSeq++
+	a.extEvents = append(a.extEvents, extsrv.Event{ID: a.extEvtSeq, Name: name, At: time.Now().Unix()})
+	if len(a.extEvents) > 100 {
+		a.extEvents = a.extEvents[len(a.extEvents)-100:]
+	}
+	a.extEvtMu.Unlock()
+}
+
+func (h extPushHandler) RecentEvents(since uint64) ([]extsrv.Event, uint64) {
+	a := h.a
+	a.extEvtMu.Lock()
+	defer a.extEvtMu.Unlock()
+	var out []extsrv.Event
+	for _, e := range a.extEvents {
+		if e.ID > since {
+			out = append(out, e)
+		}
+	}
+	return out, a.extEvtSeq
 }

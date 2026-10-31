@@ -13,10 +13,10 @@ window.addEventListener(
 
 // 页面内推送结果提示：background 推送完成后发消息过来，右上角浮出 toast
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg && msg.type === 'ariadesk-toast') showToast(msg.text, msg.ok)
+  if (msg && msg.type === 'ariadesk-toast') showToast(msg.text, msg.color || '#2e62f6')
 })
 
-function showToast(text, ok) {
+function showToast(text, color) {
   const el = document.createElement('div')
   el.textContent = text
   Object.assign(el.style, {
@@ -29,7 +29,7 @@ function showToast(text, ok) {
     fontSize: '13px',
     fontFamily: 'system-ui, "Microsoft YaHei", sans-serif',
     color: '#fff',
-    background: ok ? '#16a34a' : '#dc2626',
+    background: color,
     boxShadow: '0 4px 12px rgba(0,0,0,.25)',
     maxWidth: '360px',
     overflow: 'hidden',
