@@ -3,7 +3,7 @@
   "name": "AriaDesk 下载助手",
   "version": "0.1.0",
   "description": "把浏览器中的下载链接（普通链接 / 磁力 / 种子）推送到 AriaDesk，由 aria2 自动下载",
-  "permissions": ["downloads", "contextMenus", "storage", "notifications", "cookies"],
+  "permissions": ["downloads", "contextMenus", "storage", "notifications", "cookies", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
   "content_scripts": [

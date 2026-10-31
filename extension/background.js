@@ -109,17 +109,65 @@ function notify(title, message) {
   })
 }
 
-// 页面右上角浮动提示；tabId 缺省时投向当前活动标签页，
-// 目标页无法注入 content script（如 chrome:// 页面）时静默失败
+// 注入到页面里画 toast 的函数，必须自包含（会被序列化后在页面上下文执行）
+function showToastInPage(text, ok) {
+  const el = document.createElement('div')
+  el.textContent = text
+  Object.assign(el.style, {
+    position: 'fixed',
+    top: '16px',
+    right: '16px',
+    zIndex: '2147483647',
+    padding: '10px 16px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontFamily: 'system-ui, "Microsoft YaHei", sans-serif',
+    color: '#fff',
+    background: ok ? '#16a34a' : '#dc2626',
+    boxShadow: '0 4px 12px rgba(0,0,0,.25)',
+    maxWidth: '360px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    pointerEvents: 'none',
+    opacity: '0',
+    transition: 'opacity .2s',
+  })
+  ;(document.body || document.documentElement).appendChild(el)
+  requestAnimationFrame(() => {
+    el.style.opacity = '1'
+  })
+  setTimeout(() => {
+    el.style.opacity = '0'
+    setTimeout(() => el.remove(), 300)
+  }, 3000)
+}
+
+// 页面右上角浮动提示；tabId 缺省时投向当前活动标签页。
+// content script 未注入（页面在插件加载前打开）时改为程序化注入；
+// 仍失败（chrome:// 等不可注入页面）返回 false，由调用方回退系统通知。
 async function toastToTab(tabId, text, ok) {
-  if (tabId == null) {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    tabId = tab && tab.id
-  }
-  if (tabId == null) return
   try {
-    await chrome.tabs.sendMessage(tabId, { type: 'ariadesk-toast', text: String(text).slice(0, 120), ok })
-  } catch { /* 页面不可注入时忽略，失败场景还有系统通知兜底 */ }
+    if (tabId == null) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      tabId = tab && tab.id
+    }
+    if (tabId == null) return false
+    const clipped = String(text).slice(0, 120)
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: 'ariadesk-toast', text: clipped, ok })
+      return true
+    } catch {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        func: showToastInPage,
+        args: [clipped, !!ok],
+      })
+      return true
+    }
+  } catch {
+    return false
+  }
 }
 
 function taskName(url) {
@@ -133,11 +181,15 @@ function taskName(url) {
 }
 
 async function reportSuccess(tabId, text) {
-  await toastToTab(tabId, text, true)
+  console.info('[AriaDesk]', text)
+  const delivered = await toastToTab(tabId, text, true)
+  // 页面不可注入时回退系统通知，保证成功一定有可见反馈
+  if (!delivered) notify('AriaDesk', text)
 }
 
 async function reportFailure(tabId, err) {
   const text = err && err.message ? err.message : String(err)
+  console.warn('[AriaDesk] 推送失败:', text)
   notify('AriaDesk 推送失败', text)
   await toastToTab(tabId, `推送失败：${text}`, false)
 }
@@ -218,6 +270,7 @@ chrome.downloads.onCreated.addListener(async (item) => {
   } catch {
     return // 取消失败说明下载已结束或被接管，不再处理
   }
+  console.info('[AriaDesk] 已拦截浏览器下载:', url)
 
   try {
     if (torrent) {
