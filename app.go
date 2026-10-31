@@ -891,10 +891,17 @@ func (a *App) RemoveTask(gid string, stopped bool) error {
 		return err
 	}
 	if stopped {
-		return client.RemoveDownloadResult(a.ctx, gid)
+		if err := client.RemoveDownloadResult(a.ctx, gid); err != nil {
+			return err
+		}
+	} else if err := client.Remove(a.ctx, gid); err != nil {
+		if err := client.ForceRemove(a.ctx, gid); err != nil {
+			return err
+		}
 	}
-	if err := client.Remove(a.ctx, gid); err != nil {
-		return client.ForceRemove(a.ctx, gid)
+	// 同一 gid 的本地历史记录一并删除，否则 aria2 侧删除后历史记录会顶上来，需要再删一次
+	if a.history.Remove(gid) {
+		a.emitHistory()
 	}
 	return nil
 }
